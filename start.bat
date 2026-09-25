@@ -1,22 +1,27 @@
 @echo off
-chcp 65001 >nul
-title ANIVERSE - запуск
+title ANIVERSE
 cd /d "%~dp0"
 
 where node >nul 2>nul
 if errorlevel 1 (
-  echo [!] Node.js не найден. Скачай и установи с https://nodejs.org (кнопка LTS), затем запусти этот файл снова.
+  echo [!] Node.js not found.
+  echo     Download and install it from https://nodejs.org (LTS button),
+  echo     then run this file again.
   pause
   exit /b 1
 )
 
-if not exist node_modules (
-  echo [*] Ставлю зависимости, подожди минуту...
-  call npm install --no-audit --no-fund
+echo [*] Checking dependencies (first run takes about a minute)...
+call npm install --no-audit --no-fund
+if errorlevel 1 (
+  echo [!] npm install failed. Check your internet connection and run again.
+  pause
+  exit /b 1
 )
 
 echo.
-echo [*] Запускаю сайт... Открой браузер: http://localhost:3000
+echo [*] Starting server... Open http://localhost:3000 in your browser.
+echo     Keep this window open while using the site.
 echo.
 call npm run dev
 pause

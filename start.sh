@@ -1,18 +1,16 @@
 #!/usr/bin/env bash
-# Запуск сайта на Mac/Linux: двойным кликом или `bash start.sh`
+# One-click start (Mac/Linux): bash start.sh
 cd "$(dirname "$0")" || exit 1
 
 if ! command -v node >/dev/null 2>&1; then
-  echo "[!] Node.js не найден. Скачай и установи с https://nodejs.org (кнопка LTS), затем запусти снова."
+  echo "[!] Node.js not found. Install it from https://nodejs.org (LTS), then run again."
   exit 1
 fi
 
-if [ ! -d node_modules ]; then
-  echo "[*] Ставлю зависимости, подожди минуту..."
-  npm install --no-audit --no-fund
-fi
+echo "[*] Checking dependencies (first run takes about a minute)..."
+npm install --no-audit --no-fund || { echo "[!] npm install failed."; exit 1; }
 
 echo
-echo "[*] Запускаю сайт... Открой браузер: http://localhost:3000"
+echo "[*] Starting server... Open http://localhost:3000 in your browser."
 echo
 npm run dev
