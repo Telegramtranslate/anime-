@@ -1,0 +1,344 @@
+const API = "https://kodik-api.com";
+const TOKENS_URL =
+  "https://raw.githubusercontent.com/YaNesyTortiK/AnimeParsers/main/kdk_tokns/tokens.json";
+
+export type Anime = {
+  id: string;
+  kodikId: string;
+  title: string;
+  titleEn: string | null;
+  titleJp: string | null;
+  poster: string | null;
+  backdrop: string | null;
+  description: string | null;
+  year: number | null;
+  kind: string | null;
+  status: string | null;
+  genres: string[];
+  studios: string[];
+  rating: number | null;
+  votes: number | null;
+  imdb: number | null;
+  kp: number | null;
+  episodesTotal: number | null;
+  episodesAired: number | null;
+  lastEpisode: number | null;
+  screenshots: string[];
+  duration: number | null;
+  mpaa: string | null;
+  minimalAge: number | null;
+  airedAt: string | null;
+  link: string;
+  type: string;
+};
+
+export type Translation = { id: number; title: string; type: string; link: string; episodes: number | null };
+
+type Raw = any;
+
+let tokenCache: { token: string; at: number } | null = null;
+
+function decrypt(t: string) {
+  const h = Math.floor(t.length / 2);
+  const d = (s: string) => Buffer.from(s.split("").reverse().join(""), "base64").toString("utf8");
+  return d(t.slice(h)) + d(t.slice(0, h));
+}
+
+async function testToken(token: string) {
+  try {
+    const r = await fetch(`${API}/list?token=${token}&limit=1`, { method: "POST", cache: "no-store" });
+    if (!r.ok) return false;
+    const j = await r.json();
+    return Array.isArray(j.results);
+  } catch {
+    return false;
+  }
+}
+
+async function getToken(force = false): Promise<string> {
+  if (process.env.KODIK_TOKEN) return process.env.KODIK_TOKEN;
+  if (!force && tokenCache && Date.now() - tokenCache.at < 6 * 3600_000) return tokenCache.token;
+  const r = await fetch(TOKENS_URL, { cache: "no-store" });
+  const j = await r.json();
+  const list: string[] = [...(j.stable ?? []), ...(j.unstable ?? [])].map((x: Raw) => decrypt(x.tokn));
+  for (const t of list) {
+    if (await testToken(t)) {
+      tokenCache = { token: t, at: Date.now() };
+      return t;
+    }
+  }
+  throw new Error("Нет рабочего токена Kodik");
+}
+
+const cache = new Map<string, { at: number; data: Raw }>();
+const TTL = 10 * 60_000;
+
+/** Сетевая ли ошибка (в отличие от логической ошибки API). */
+function isNetworkError(e: unknown) {
+  if (e instanceof TypeError) return true; // fetch failed / DNS / обрыв соединения
+  const s = String((e as Error)?.message ?? e);
+  return /ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|network|socket|fetch failed|нет рабочего токена|недоступен|unavailable|invalid url/i.test(s);
+}
+
+/** Демо-режим с локальным снапшотом базы. Включается принудительно через ANIVERSE_DEMO=1. */
+function demoForced() {
+  return process.env.ANIVERSE_DEMO === "1" || process.env.ANIVERSE_DEMO === "force";
+}
+
+function demoAllowed() {
+  return process.env.ANIVERSE_DEMO !== "0" && process.env.ANIVERSE_DEMO !== "off";
+}
+
+async function call(endpoint: "list" | "search", params: Record<string, string | number | undefined>): Promise<Raw> {
+  const qs = new URLSearchParams();
+  for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== "") qs.set(k, String(v));
+  const key = endpoint + "?" + qs.toString();
+  const hit = cache.get(key);
+  if (hit && Date.now() - hit.at < TTL) return hit.data;
+
+  let lastError: unknown = null;
+  for (let attempt = 0; attempt < 2; attempt++) {
+    const token = await getToken(attempt > 0);
+    try {
+      const r = await fetch(`${API}/${endpoint}?token=${token}&${qs}`, { method: "POST", cache: "no-store" });
+      if (r.status === 401 || r.status === 403) continue;
+      const data = await r.json();
+      if (data.error) {
+        if (String(data.error).toLowerCase().includes("token")) continue;
+        throw new Error(data.error);
+      }
+      cache.set(key, { at: Date.now(), data });
+      if (cache.size > 500) cache.delete(cache.keys().next().value!);
+      return data;
+    } catch (e) {
+      lastError = e;
+      if (!isNetworkError(e) && attempt === 1) throw e;
+    }
+  }
+  throw lastError ?? new Error("Kodik API недоступен");
+}
+
+const BANNED = ["Хентай", "Эротика", "Яой", "Юри"];
+
+function isSafe(r: Raw) {
+  const m = r.material_data ?? {};
+  if (m.rating_mpaa === "rx") return false;
+  const g: string[] = m.anime_genres ?? m.genres ?? [];
+  return !g.some((x) => BANNED.includes(x));
+}
+
+function normalize(r: Raw): Anime {
+  const m = r.material_data ?? {};
+  const shots: string[] = (m.screenshots?.length ? m.screenshots : r.screenshots) ?? [];
+  return {
+    id: r.shikimori_id ? String(r.shikimori_id) : r.id,
+    kodikId: r.id,
+    title: m.anime_title || m.title || r.title,
+    titleEn: m.title_en || r.title_orig || null,
+    titleJp: m.other_titles_jp?.[0] ?? null,
+    // постер: Shikimori -> Кинопоиск -> первый скриншот, чтобы тайтл не выпадал из каталога
+    poster: m.anime_poster_url || m.poster_url || shots[0] || null,
+    backdrop: shots[0] ?? m.anime_poster_url ?? null,
+    description: m.anime_description || m.description || null,
+    year: m.year ?? r.year ?? null,
+    kind: m.anime_kind ?? null,
+    status: m.anime_status ?? m.all_status ?? null,
+    genres: m.anime_genres ?? m.genres ?? [],
+    studios: m.anime_studios ?? [],
+    rating: m.shikimori_rating ?? null,
+    votes: m.shikimori_votes ?? null,
+    imdb: m.imdb_rating ?? null,
+    kp: m.kinopoisk_rating ?? null,
+    episodesTotal: m.episodes_total ?? r.episodes_count ?? null,
+    episodesAired: m.episodes_aired ?? r.last_episode ?? null,
+    lastEpisode: r.last_episode ?? null,
+    screenshots: shots,
+    duration: m.duration ?? null,
+    mpaa: m.rating_mpaa ?? null,
+    minimalAge: m.minimal_age ?? null,
+    airedAt: m.aired_at ?? null,
+    link: r.link,
+    type: r.type,
+  };
+}
+
+function materialScore(r: Raw) {
+  const m = r.material_data;
+  if (!m) return 0;
+  let s = Object.keys(m).length;
+  if (m.anime_poster_url || m.poster_url) s += 10;
+  if (m.anime_title) s += 5;
+  if (m.shikimori_rating) s += 2;
+  return s;
+}
+
+/**
+ * Схлопывает разные озвучки одного тайтла в одну карточку.
+ * Раньше бралась первая попавшаяся запись — если у неё не было метаданных
+ * (постера/описания), тайтл целиком пропадал из каталога. Теперь для каждого
+ * тайтла сохраняется запись с самыми полными метаданными, а позиция в выдаче
+ * остаётся от первой встречи (серверная сортировка не ломается).
+ */
+function dedupe(results: Raw[]): Anime[] {
+  const best = new Map<string, Raw>();
+  const order: string[] = [];
+  for (const r of results) {
+    if (!isSafe(r)) continue;
+    const id = r.shikimori_id ? String(r.shikimori_id) : r.id;
+    const cur = best.get(id);
+    if (!cur) {
+      best.set(id, r);
+      order.push(id);
+    } else if (materialScore(r) > materialScore(cur)) {
+      best.set(id, r);
+    }
+  }
+  return order.map((id) => normalize(best.get(id)!));
+}
+
+export type ListParams = {
+  sort?: "shikimori_rating" | "updated_at" | "created_at" | "year" | "kinopoisk_rating" | "imdb_rating";
+  order?: "asc" | "desc";
+  anime_kind?: string;
+  anime_status?: string;
+  anime_genres?: string;
+  year?: string | number;
+  types?: string;
+  limit?: number;
+  next?: string;
+};
+
+export async function listAnime(p: ListParams = {}) {
+  try {
+    if (demoForced()) {
+      const { demoList } = await import("./demo");
+      return demoList(p, dedupe);
+    }
+    const data = await call("list", {
+      types: p.types ?? "anime-serial,anime",
+      with_material_data: "true",
+      limit: p.limit ?? 100,
+      sort: p.sort ?? "updated_at",
+      order: p.order ?? "desc",
+      anime_kind: p.anime_kind,
+      anime_status: p.anime_status,
+      anime_genres: p.anime_genres,
+      year: p.year,
+      next: p.next,
+    });
+    let next: string | null = null;
+    if (data.next_page) {
+      try {
+        next = new URL(data.next_page).searchParams.get("next");
+      } catch {}
+    }
+    return { items: dedupe(data.results ?? []), next, total: data.total as number };
+  } catch (e) {
+    if (!demoAllowed() || !isNetworkError(e)) throw e;
+    const { demoList } = await import("./demo");
+    return demoList(p, dedupe);
+  }
+}
+
+export async function safeList(p: ListParams = {}) {
+  try {
+    return await listAnime(p);
+  } catch (e) {
+    console.error(e);
+    return { items: [] as Anime[], next: null, total: 0 };
+  }
+}
+
+export async function searchAnime(q: string) {
+  try {
+    if (demoForced()) {
+      const { demoSearch } = await import("./demo");
+      return dedupe(demoSearch(q));
+    }
+    const data = await call("search", {
+      title: q,
+      types: "anime-serial,anime",
+      with_material_data: "true",
+      limit: 100,
+    });
+    return dedupe(data.results ?? []);
+  } catch (e) {
+    if (!demoAllowed() || !isNetworkError(e)) throw e;
+    const { demoSearch } = await import("./demo");
+    return dedupe(demoSearch(q));
+  }
+}
+
+export async function getAnime(id: string): Promise<{ anime: Anime; translations: Translation[] } | null> {
+  try {
+    if (demoForced()) {
+      const { demoRawById } = await import("./demo");
+      return shapeAnime(demoRawById(id));
+    }
+    const params: Record<string, string> = /^\d+$/.test(id) ? { shikimori_id: id } : { id };
+    const data = await call("search", { ...params, with_material_data: "true", limit: 100 });
+    return shapeAnime(data.results ?? []);
+  } catch (e) {
+    if (!demoAllowed() || !isNetworkError(e)) throw e;
+    const { demoRawById } = await import("./demo");
+    return shapeAnime(demoRawById(id));
+  }
+}
+
+function shapeAnime(rawResults: Raw[]): { anime: Anime; translations: Translation[] } | null {
+  const results: Raw[] = rawResults.filter(isSafe);
+  if (!results.length) return null;
+  const best = [...results].sort((a, b) => materialScore(b) - materialScore(a))[0];
+  const anime = normalize(best);
+  const seen = new Set<number>();
+  const translations: Translation[] = [];
+  for (const r of results) {
+    const t = r.translation;
+    if (!t || seen.has(t.id)) continue;
+    seen.add(t.id);
+    translations.push({ id: t.id, title: t.title, type: t.type, link: r.link, episodes: r.episodes_count ?? r.last_episode ?? null });
+  }
+  translations.sort((a, b) => (a.type === b.type ? (b.episodes ?? 0) - (a.episodes ?? 0) : a.type === "voice" ? -1 : 1));
+  return { anime, translations };
+}
+
+export const KINDS: Record<string, string> = {
+  tv: "ТВ-сериал",
+  movie: "Фильм",
+  ova: "OVA",
+  ona: "ONA",
+  special: "Спешл",
+  tv_special: "ТВ-спешл",
+  music: "Клип",
+};
+
+/**
+ * Значения, которые реально принимает фильтр anime_kind у Kodik.
+ * `tv_special` встречается в метаданных тайтлов и остался в KINDS (для
+ * отображения), но списочный эндпоинт его игнорирует и возвращает всю базу —
+ * поэтому из фильтров каталога он исключён.
+ */
+export const FILTER_KINDS: Record<string, string> = {
+  tv: "ТВ-сериал",
+  movie: "Фильм",
+  ova: "OVA",
+  ona: "ONA",
+  special: "Спешл",
+  music: "Клип",
+};
+
+export const STATUSES: Record<string, string> = { ongoing: "Онгоинг", released: "Вышло", anons: "Анонс" };
+
+/**
+ * Названия жанров сверены с реальным словарём Kodik (поле anime_genres).
+ * Фильтр чувствителен к написанию: например, в базе «Исэкай» через «э»
+ * (2 500+ тайтлов), а «Исекай» не находит ничего.
+ */
+export const GENRES = [
+  "Экшен", "Приключения", "Комедия", "Драма", "Романтика", "Фэнтези", "Фантастика", "Повседневность",
+  "Сверхъестественное", "Психологическое", "Триллер", "Детектив", "Школа", "Спорт", "Музыка", "Меха",
+  "Исторический", "Военное", "Сёнен", "Сёдзё", "Сэйнэн", "Исэкай", "Ужасы", "Самураи", "Боевые искусства",
+];
+
+/** Самый ранний тайтл в базе Kodik — «Паук и тюльпан» (1943). */
+export const MIN_YEAR = 1940;
