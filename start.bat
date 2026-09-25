@@ -4,9 +4,18 @@ cd /d "%~dp0"
 
 where node >nul 2>nul
 if errorlevel 1 (
+  if exist "C:\Program Files\nodejs\node.exe" (
+    set "PATH=%PATH%;C:\Program Files\nodejs;%APPDATA%\npm"
+  ) else if exist "%LOCALAPPDATA%\Programs\nodejs\node.exe" (
+    set "PATH=%PATH%;%LOCALAPPDATA%\Programs\nodejs;%APPDATA%\npm"
+  )
+)
+
+where node >nul 2>nul
+if errorlevel 1 (
   echo [!] Node.js not found.
   echo     Download and install it from https://nodejs.org (LTS button),
-  echo     then run this file again.
+  echo     then RESTART the PC and run this file again.
   pause
   exit /b 1
 )
