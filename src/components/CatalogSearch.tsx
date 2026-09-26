@@ -71,7 +71,7 @@ export default function CatalogSearch() {
       </form>
 
       {open && items.length > 0 && (
-        <div className="glass absolute inset-x-0 top-full z-40 mt-2 max-h-[60vh] overflow-y-auto rounded-2xl p-2 shadow-2xl shadow-black/60">
+        <div className="absolute inset-x-0 top-full z-40 mt-2 max-h-[60vh] overflow-y-auto rounded-2xl border border-line bg-ink/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl">
           {items.map((s) => (
             <button key={s.id} onClick={() => go(s.id)} className="flex w-full items-center gap-3 rounded-xl px-2 py-2 text-left transition hover:bg-white/10">
               {s.poster ? (

@@ -77,7 +77,7 @@ const TTL = 10 * 60_000;
 function isNetworkError(e: unknown) {
   if (e instanceof TypeError) return true; // fetch failed / DNS / обрыв соединения
   const s = String((e as Error)?.message ?? e);
-  return /ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|network|socket|fetch failed|нет рабочего токена|недоступен|unavailable|invalid url/i.test(s);
+  return /ECONNRESET|ECONNREFUSED|ENOTFOUND|EAI_AGAIN|ETIMEDOUT|timeout|abort|network|socket|fetch failed|нет рабочего токена|недоступен|unavailable|invalid url/i.test(s);
 }
 
 /** Демо-режим с локальным снапшотом базы. Включается принудительно через ANIVERSE_DEMO=1. */
@@ -100,7 +100,11 @@ async function call(endpoint: "list" | "search", params: Record<string, string |
   for (let attempt = 0; attempt < 2; attempt++) {
     const token = await getToken(attempt > 0);
     try {
-      const r = await fetch(`${API}/${endpoint}?token=${token}&${qs}`, { method: "POST", cache: "no-store" });
+      const r = await fetch(`${API}/${endpoint}?token=${token}&${qs}`, {
+        method: "POST",
+        cache: "no-store",
+        signal: AbortSignal.timeout(8000),
+      });
       if (r.status === 401 || r.status === 403) continue;
       const data = await r.json();
       if (data.error) {
@@ -365,23 +369,17 @@ export async function searchAnime(q: string) {
 
   // Kodik ищет только почти полное название, Shikimori — с первых букв.
   // Берём оба источника: Kodik даёт полные карточки, Shikimori — точные попадания.
-  let kodikItems: Anime[] = [];
-  let kodikErr: unknown = null;
-  try {
-    const data = await call("search", { title: q, types: "anime-serial,anime", with_material_data: "true", limit: 100 });
-    kodikItems = dedupe(data.results ?? []);
-  } catch (e) {
-    kodikErr = e;
-  }
-
-  let shikiItems: Anime[] = [];
-  let shikiErr: unknown = null;
-  try {
-    const { shikiSearch } = await import("./shiki");
-    shikiItems = await shikiSearch(q);
-  } catch (e) {
-    shikiErr = e;
-  }
+  // параллельно и с таймаутом: медленный источник не топит весь поиск
+  const [kRes, sRes] = await Promise.allSettled([
+    call("search", { title: q, types: "anime-serial,anime", with_material_data: "true", limit: 100 }).then(
+      (d) => dedupe((d.results ?? []) as Raw[]),
+    ),
+    import("./shiki").then((m) => m.shikiSearch(q)),
+  ]);
+  const kodikItems = kRes.status === "fulfilled" ? kRes.value : [];
+  const kodikErr = kRes.status === "rejected" ? kRes.reason : null;
+  const shikiItems = sRes.status === "fulfilled" ? sRes.value : [];
+  const shikiErr = sRes.status === "rejected" ? sRes.reason : null;
 
   if (!kodikItems.length && !shikiItems.length) {
     if (demoAllowed() && (isNetworkError(kodikErr) || isNetworkError(shikiErr))) {

@@ -64,6 +64,7 @@ export async function shikiSearch(q: string, limit = 12): Promise<Anime[]> {
   const r = await fetch(`${SHIKI}/api/animes?search=${encodeURIComponent(q)}&limit=${limit}&censored=true`, {
     headers: { "User-Agent": "Aniverse (personal anime catalog)" },
     cache: "no-store",
+    signal: AbortSignal.timeout(6000),
   });
   if (!r.ok) throw new Error(`Shikimori HTTP ${r.status}`);
   const arr: ShikiRaw[] = await r.json();

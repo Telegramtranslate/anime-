@@ -17,7 +17,13 @@ export async function GET(req: Request) {
     }));
     return Response.json(
       { items },
-      { headers: { "Cache-Control": "public, s-maxage=300, stale-while-revalidate=600" } },
+      {
+        headers: {
+          "Cache-Control": items.length
+            ? "public, s-maxage=60, stale-while-revalidate=300"
+            : "no-store",
+        },
+      },
     );
   } catch {
     return Response.json({ items: [] });
