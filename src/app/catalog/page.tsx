@@ -1,6 +1,7 @@
 import Link from "next/link";
 import { Suspense } from "react";
 import AnimeCard from "@/components/AnimeCard";
+import CatalogSearch from "@/components/CatalogSearch";
 import Filters from "@/components/Filters";
 import { FILTER_KINDS, GENRES, MIN_YEAR, PAGE_SIZE, STATUSES, safePagedList, type ListParams } from "@/lib/kodik";
 
@@ -42,6 +43,9 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
           : "Подборка аниме"}
       </p>
       <div className="mt-8">
+        <CatalogSearch />
+      </div>
+      <div className="mt-6">
         <Suspense>
           <Filters
             kinds={Object.entries(FILTER_KINDS).map(([value, label]) => ({ value, label }))}
