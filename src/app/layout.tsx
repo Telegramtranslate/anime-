@@ -16,6 +16,7 @@ export const metadata: Metadata = {
   description: "Тысячи аниме-сериалов и фильмов в HD с лучшими озвучками. Онгоинги, топы, каталог и персональная коллекция.",
   icons: { icon: [{ url: "/favicon.png", type: "image/png" }] },
   themeColor: "#07070b",
+  verification: { google: "YuKXId-N_keD9-kaV-ycKhi35fJo2Sx5mLFzLesXRhI" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
