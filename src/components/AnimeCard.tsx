@@ -1,19 +1,13 @@
 import Link from "next/link";
 import type { Anime } from "@/lib/kodik";
 import { KINDS } from "@/lib/kodik";
+import Poster from "./Poster";
 
 export default function AnimeCard({ a, rank }: { a: Anime; rank?: number }) {
   return (
     <Link href={`/anime/${a.id}`} className="group relative block">
       <div className="relative aspect-[2/3] overflow-hidden rounded-2xl bg-panel ring-1 ring-line transition duration-500 group-hover:-translate-y-1 group-hover:ring-accent/50 group-hover:shadow-[0_20px_60px_-15px_rgba(139,92,246,.5)]">
-        {a.poster ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img src={a.poster} alt={a.title} loading="lazy" className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
-        ) : (
-          <div className="grid h-full w-full place-items-center bg-gradient-to-br from-accent/30 via-panel to-accent2/20">
-            <span className="font-display text-5xl font-extrabold text-white/25">{a.title[0]?.toUpperCase() ?? "•"}</span>
-          </div>
-        )}
+        <Poster src={a.poster} alt={a.title} className="h-full w-full object-cover transition duration-700 group-hover:scale-105" />
         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/10 to-transparent opacity-80" />
         {a.rating ? (
           <div className="absolute left-2.5 top-2.5 flex items-center gap-1 rounded-lg bg-black/60 px-2 py-1 text-xs font-bold backdrop-blur-md">

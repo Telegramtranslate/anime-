@@ -3,7 +3,7 @@ import { Suspense } from "react";
 import AnimeCard from "@/components/AnimeCard";
 import CatalogSearch from "@/components/CatalogSearch";
 import Filters from "@/components/Filters";
-import { FILTER_KINDS, MIN_YEAR, PAGE_SIZE, STATUSES, safeGenres, safePagedList, type ListParams } from "@/lib/kodik";
+import { FILTER_KINDS, GENRES, MIN_YEAR, PAGE_SIZE, STATUSES, safePagedList, type ListParams } from "@/lib/kodik";
 
 export const revalidate = 60; // ISR: кэш страницы 60 секунд
 export const metadata = {
@@ -63,7 +63,7 @@ const totalPages = realTotal ? Math.ceil(realTotal / PAGE_SIZE) : 0;
           <Filters
             kinds={Object.entries(FILTER_KINDS).map(([value, label]) => ({ value, label }))}
             statuses={Object.entries(STATUSES).map(([value, label]) => ({ value, label }))}
-            genres={await safeGenres()}
+            genres={GENRES}
             years={years}
           />
         </Suspense>

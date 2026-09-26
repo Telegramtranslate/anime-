@@ -153,6 +153,15 @@ function isSafe(r: Raw) {
   return !g.some((x) => BANNED.includes(x));
 }
 
+/** Kodik/Shikimori иногда отдают постеры относительным путём — дополняем до полного URL. */
+function absUrl(u: string | null | undefined): string | null {
+  if (!u) return null;
+  if (/^https?:\/\//.test(u)) return u;
+  if (u.startsWith("//")) return `https:${u}`;
+  if (u.startsWith("/")) return `https://i.shikimori.one${u}`;
+  return u;
+}
+
 function normalize(r: Raw): Anime {
   const m = r.material_data ?? {};
   const shots: string[] = (m.screenshots?.length ? m.screenshots : r.screenshots) ?? [];
@@ -163,8 +172,8 @@ function normalize(r: Raw): Anime {
     titleEn: m.title_en || r.title_orig || null,
     titleJp: m.other_titles_jp?.[0] ?? null,
     // постер: Shikimori -> Кинопоиск -> первый скриншот, чтобы тайтл не выпадал из каталога
-    poster: m.anime_poster_url || m.poster_url || shots[0] || null,
-    backdrop: shots[0] ?? m.anime_poster_url ?? null,
+    poster: absUrl(m.anime_poster_url || m.poster_url || shots[0] || null),
+    backdrop: absUrl(shots[0] ?? m.anime_poster_url ?? null),
     description: m.anime_description || m.description || null,
     year: m.year ?? r.year ?? null,
     kind: m.anime_kind ?? null,
@@ -178,7 +187,7 @@ function normalize(r: Raw): Anime {
     episodesTotal: m.episodes_total ?? r.episodes_count ?? null,
     episodesAired: m.episodes_aired ?? r.last_episode ?? null,
     lastEpisode: r.last_episode ?? null,
-    screenshots: shots,
+    screenshots: shots.map((x) => absUrl(x)).filter((x): x is string => Boolean(x)),
     duration: m.duration ?? null,
     mpaa: m.rating_mpaa ?? null,
     minimalAge: m.minimal_age ?? null,
@@ -538,30 +547,6 @@ export const STATUSES: Record<string, string> = { ongoing: "Онгоинг", rel
  * Фильтр чувствителен к написанию: например, в базе «Исэкай» через «э»
  * (2 500+ тайтлов), а «Исекай» не находит ничего.
  */
-let genresCache: { at: number; list: string[] } | null = null;
-
-/**
- * Живой словарь жанров Kodik (те же названия, что принимает фильтр anime_genres).
- * Сортировка по популярности, хентайные жанры скрыты. Кэш — 1 час, фолбэк — GENRES.
- */
-export async function safeGenres(): Promise<string[]> {
-  if (genresCache && Date.now() - genresCache.at < 3600_000) return genresCache.list;
-  try {
-    const data = await call("genres", { types: "anime-serial,anime" });
-    const raw: { title?: string; count?: number }[] = Array.isArray(data) ? data : (data.results ?? []);
-    const list = raw
-      .filter((g) => g.title && !BANNED.includes(g.title))
-      .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-      .map((g) => g.title!)
-      .slice(0, 40);
-    if (list.length >= 10) {
-      genresCache = { at: Date.now(), list };
-      return list;
-    }
-  } catch {}
-  return GENRES;
-}
-
 export const GENRES = [
   "Экшен", "Приключения", "Комедия", "Драма", "Романтика", "Фэнтези", "Фантастика", "Повседневность",
   "Сверхъестественное", "Психологическое", "Триллер", "Детектив", "Школа", "Спорт", "Музыка", "Меха",

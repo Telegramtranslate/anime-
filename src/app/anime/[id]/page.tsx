@@ -5,6 +5,7 @@ import type { Metadata } from "next";
 import Feedback from "@/components/Feedback";
 import Player from "@/components/Player";
 import FavoriteButton from "@/components/FavoriteButton";
+import Poster from "@/components/Poster";
 import Row from "@/components/Row";
 import Shots from "@/components/Shots";
 import { fbGetComments, fbGetMyRating, fbGetRating } from "@/lib/firebase";
@@ -96,8 +97,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
 
         <div className="relative mx-auto grid max-w-[1500px] gap-10 px-5 pb-12 pt-28 md:grid-cols-[280px_1fr] md:px-10 md:pt-36">
           <div className="fade-up mx-auto w-56 md:w-full">
-            {/* eslint-disable-next-line @next/next/no-img-element */}
-            {a.poster && <img src={a.poster} alt={a.title} className="aspect-[2/3] w-full rounded-3xl object-cover shadow-2xl ring-1 ring-white/10" />}
+            <Poster src={a.poster} alt={a.title} letterClass="text-7xl" className="aspect-[2/3] w-full rounded-3xl object-cover shadow-2xl ring-1 ring-white/10" />
           </div>
           <div className="fade-up">
             <div className="flex flex-wrap gap-2 text-xs font-semibold">

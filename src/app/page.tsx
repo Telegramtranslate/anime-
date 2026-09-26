@@ -1,7 +1,7 @@
 import Link from "next/link";
 import Hero from "@/components/Hero";
 import Row from "@/components/Row";
-import { safeGenres, safeList } from "@/lib/kodik";
+import { GENRES, safeList } from "@/lib/kodik";
 
 export const revalidate = 60; // страница кэшируется на 60 секунд (ISR)
 
@@ -14,7 +14,6 @@ export default async function Home() {
     safeList({ sort: "year", types: "anime-serial" }),
   ]);
 
-  const genres = await safeGenres();
   const heroItems = ongoing.items.filter((a) => a.backdrop && a.description).slice(0, 6);
   const topRated = top.items.filter((a) => (a.votes ?? 0) > 5000).slice(0, 10);
 
@@ -29,7 +28,7 @@ export default async function Home() {
         <section className="mx-auto mt-16 max-w-[1500px] px-5 md:px-10">
           <h2 className="mb-5 font-display text-xl font-bold md:text-2xl">Жанры</h2>
           <div className="flex flex-wrap gap-2.5">
-            {genres.map((g, i) => (
+            {GENRES.map((g, i) => (
               <Link
                 key={g}
                 href={`/catalog?genre=${encodeURIComponent(g)}`}

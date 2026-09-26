@@ -27,6 +27,7 @@ export default function Hero({ items }: { items: Anime[] }) {
           loading={k === 0 ? "eager" : "lazy"}
           fetchPriority={k === 0 ? "high" : "auto"}
           decoding="async"
+          onError={(e) => { e.currentTarget.style.display = "none"; }}
           className={`absolute inset-0 h-full w-full object-cover transition-all duration-[1500ms] ${k === i ? "scale-105 opacity-100" : "scale-100 opacity-0"}`}
         />
       ))}
