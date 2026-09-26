@@ -4,6 +4,7 @@ import type { Metadata } from "next";
 import Player from "@/components/Player";
 import FavoriteButton from "@/components/FavoriteButton";
 import Row from "@/components/Row";
+import Shots from "@/components/Shots";
 import { KINDS, STATUSES, getAnime, safeList } from "@/lib/kodik";
 
 export const dynamic = "force-dynamic";
@@ -103,12 +104,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
       {a.screenshots.length > 1 && (
         <section className="mx-auto mt-14 max-w-[1500px] px-5 md:px-10">
           <h2 className="mb-5 font-display text-xl font-bold md:text-2xl">Кадры</h2>
-          <div className="no-scrollbar flex gap-4 overflow-x-auto pb-2">
-            {a.screenshots.slice(0, 8).map((s) => (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img key={s} src={s} alt="" loading="lazy" className="aspect-video w-72 shrink-0 rounded-2xl object-cover ring-1 ring-line md:w-96" />
-            ))}
-          </div>
+          <Shots items={a.screenshots.slice(0, 12)} />
         </section>
       )}
 
