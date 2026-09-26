@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { fbEnabled, fbGet, fbSet } from "@/lib/firebase";
+import { fbEnabled, fbGet, fbGetProfile, fbSet } from "@/lib/firebase";
 
 export const dynamic = "force-dynamic";
 
@@ -42,7 +42,9 @@ export async function POST(req: Request) {
       }
     }
 
-    const name = String(u.displayName ?? u.email ?? "");
+    // свой никнейм (если менялся) важнее имени из Google/Email
+    const prof = await fbGetProfile(fuid);
+    const name = prof.name || String(u.displayName ?? u.email ?? "");
     const picture = String(u.photoUrl ?? "");
     const opts = { httpOnly: true, sameSite: "lax" as const, path: "/", maxAge: 60 * 60 * 24 * 365 };
     store.set("fuid", fuid, opts);

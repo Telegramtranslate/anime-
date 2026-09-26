@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { useEffect, useRef, useState } from "react";
 import AuthModal, { loadAuth, type Me } from "./AuthModal";
+import NicknameModal from "./NicknameModal";
 
 /** Кнопка входа / меню аккаунта в шапке. */
 export default function AuthButton() {
@@ -10,6 +11,7 @@ export default function AuthButton() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [notifOpen, setNotifOpen] = useState(false);
   const [modal, setModal] = useState(false);
+  const [nickOpen, setNickOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
@@ -38,6 +40,7 @@ export default function AuthButton() {
 
   if (me) {
     return (
+      <>
       <div ref={boxRef} className="relative">
         <button onClick={() => setMenuOpen((o) => !o)} className="flex items-center" aria-label="Меню аккаунта">
           {me.picture ? (
@@ -60,6 +63,13 @@ export default function AuthButton() {
               <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/50">скоро</span>
             </button>
             {notifOpen && <p className="px-3 pb-2 text-xs text-white/40">Пока уведомлений нет — раздел в разработке.</p>}
+            <button
+              onClick={() => { setMenuOpen(false); setNickOpen(true); }}
+              className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10"
+            >
+              <svg viewBox="0 0 24 24" className="h-4 w-4 stroke-sky-300" fill="none" strokeWidth="2"><path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" /></svg>
+              Сменить никнейм
+            </button>
             <div className="my-1 h-px bg-line" />
             <button onClick={logout} className="w-full rounded-xl px-3 py-2.5 text-left text-sm font-semibold transition hover:bg-white/10">
               Выйти
@@ -67,6 +77,16 @@ export default function AuthButton() {
           </div>
         )}
       </div>
+      {nickOpen && (
+        <NicknameModal
+          onClose={() => setNickOpen(false)}
+          onDone={() => {
+            setNickOpen(false);
+            window.location.reload();
+          }}
+        />
+      )}
+      </>
     );
   }
 

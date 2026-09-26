@@ -300,3 +300,35 @@ function fbParseComments(f: Record<string, V>): CommentItem[] {
     })
     .filter((c) => c.text);
 }
+
+/* ---------- профиль: смена никнейма раз в 7 дней ---------- */
+
+export const NICK_COOLDOWN = 7 * 24 * 3600 * 1000;
+
+export type Profile = { name: string | null; changedAt: number | null };
+
+export async function fbGetProfile(uid: string): Promise<Profile> {
+  if (!fbEnabled()) return { name: null, changedAt: null };
+  const f = await getDoc(collUrl("users", uid));
+  const p = f?.profile?.mapValue?.fields ?? {};
+  return { name: str(p.name), changedAt: num(p.changedAt) };
+}
+
+export async function fbSetNickname(
+  uid: string,
+  name: string,
+): Promise<{ ok: boolean; error?: string; nextAt?: number }> {
+  if (!fbEnabled()) return { ok: false, error: "no-db" };
+  const f = (await getDoc(collUrl("users", uid))) ?? {};
+  const p = f.profile?.mapValue?.fields ?? {};
+  const changedAt = num(p.changedAt);
+  const now = Date.now();
+  if (changedAt && now - changedAt < NICK_COOLDOWN) {
+    return { ok: false, error: "soon", nextAt: changedAt + NICK_COOLDOWN };
+  }
+  await setDoc(collUrl("users", uid), {
+    ...f,
+    profile: { mapValue: { fields: { name: sv(name), changedAt: iv(now) } } },
+  });
+  return { ok: true };
+}
