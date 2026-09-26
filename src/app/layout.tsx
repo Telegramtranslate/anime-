@@ -20,6 +20,10 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="ru">
+      <head>
+        <link rel="preconnect" href="https://i.shikimori.one" crossOrigin="anonymous" />
+        <link rel="dns-prefetch" href="https://i.shikimori.one" />
+      </head>
       <body className="noise bg-ink font-sans text-white antialiased">
         <Header />
         <CodeGuard />

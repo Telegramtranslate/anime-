@@ -5,7 +5,7 @@ import CatalogSearch from "@/components/CatalogSearch";
 import Filters from "@/components/Filters";
 import { FILTER_KINDS, GENRES, MIN_YEAR, PAGE_SIZE, STATUSES, safePagedList, type ListParams } from "@/lib/kodik";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60; // ISR: кэш страницы 60 секунд
 export const metadata = { title: "Каталог аниме" };
 
 type SP = Promise<Record<string, string | undefined>>;

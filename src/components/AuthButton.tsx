@@ -1,9 +1,13 @@
 "use client";
 
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useEffect, useRef, useState } from "react";
-import AuthModal, { loadAuth, type Me } from "./AuthModal";
-import NicknameModal from "./NicknameModal";
+import type { Me } from "./AuthModal";
+
+// firebase подгружается отдельным чанком только при открытии модалок входа/никнейма
+const AuthModal = dynamic(() => import("./AuthModal"), { ssr: false });
+const NicknameModal = dynamic(() => import("./NicknameModal"), { ssr: false });
 
 /** Кнопка входа / меню аккаунта в шапке. */
 export default function AuthButton() {
@@ -30,7 +34,7 @@ export default function AuthButton() {
 
   const logout = async () => {
     setMenuOpen(false);
-    const { fb, auth } = await loadAuth();
+    const { fb, auth } = await import("./AuthModal").then((m) => m.loadAuth());
     await fetch("/api/auth/logout", { method: "POST" });
     await fb.signOut(auth).catch(() => {});
     setMe(null);
@@ -92,7 +96,7 @@ export default function AuthButton() {
       {modal && (
         <AuthModal
           onClose={() => setModal(false)}
-          onDone={(u) => {
+          onDone={(u: Me) => {
             setModal(false);
             setMe(u);
             window.location.reload();

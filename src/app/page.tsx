@@ -3,7 +3,7 @@ import Hero from "@/components/Hero";
 import Row from "@/components/Row";
 import { GENRES, safeList } from "@/lib/kodik";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 60; // страница кэшируется на 60 секунд (ISR)
 
 export default async function Home() {
   const [ongoing, fresh, top, movies, newest] = await Promise.all([

@@ -24,6 +24,9 @@ export default function Hero({ items }: { items: Anime[] }) {
           key={x.id}
           src={x.backdrop ?? x.poster ?? ""}
           alt=""
+          loading={k === 0 ? "eager" : "lazy"}
+          fetchPriority={k === 0 ? "high" : "auto"}
+          decoding="async"
           className={`absolute inset-0 h-full w-full object-cover transition-all duration-[1500ms] ${k === i ? "scale-105 opacity-100" : "scale-100 opacity-0"}`}
         />
       ))}
@@ -66,7 +69,7 @@ export default function Hero({ items }: { items: Anime[] }) {
             aria-label={x.title}
           >
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img src={x.poster ?? ""} alt="" className="h-full w-full object-cover" />
+            <img src={x.poster ?? ""} alt="" loading="lazy" decoding="async" className="h-full w-full object-cover" />
           </button>
         ))}
       </div>
