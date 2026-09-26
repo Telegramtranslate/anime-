@@ -547,6 +547,56 @@ export const STATUSES: Record<string, string> = { ongoing: "Онгоинг", rel
  * Фильтр чувствителен к написанию: например, в базе «Исэкай» через «э»
  * (2 500+ тайтлов), а «Исекай» не находит ничего.
  */
+let genresCache: { at: number; list: string[] } | null = null;
+const GENRES_TTL = 6 * 3600_000;
+
+/**
+ * Рабочие жанры: старые + популярные из живого словаря Kodik, но каждый кандидат
+ * предварительно проверяется запросом к /list — в список попадают только жанры,
+ * по которым реально есть тайтлы. Кэш 6 часов, фолбэк — GENRES.
+ */
+export async function safeGenres(): Promise<string[]> {
+  if (genresCache && Date.now() - genresCache.at < GENRES_TTL) return genresCache.list;
+  try {
+    const extra: string[] = [];
+    try {
+      const data = await call("genres", { types: "anime-serial,anime" });
+      const raw: { title?: string; count?: number }[] = Array.isArray(data) ? data : (data.results ?? []);
+      extra.push(
+        ...raw
+          .filter((g) => g.title && !BANNED.includes(g.title))
+          .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
+          .map((g) => g.title!)
+          .slice(0, 60),
+      );
+    } catch {}
+    const candidates = [...GENRES, ...extra.filter((g) => !GENRES.includes(g))].slice(0, 40);
+
+    const ok: string[] = [];
+    for (let i = 0; i < candidates.length; i += 8) {
+      const chunk = candidates.slice(i, i + 8);
+      const res = await Promise.all(
+        chunk.map(async (g) => {
+          try {
+            const d = await call("list", { types: "anime-serial,anime", anime_genres: g, limit: 1 });
+            return ((d.total as number) ?? 0) > 0 ? g : null;
+          } catch {
+            return null;
+          }
+        }),
+      );
+      for (const g of res) if (g) ok.push(g);
+    }
+
+    if (ok.length >= 10) {
+      const ordered = [...GENRES.filter((g) => ok.includes(g)), ...ok.filter((g) => !GENRES.includes(g))].slice(0, 30);
+      genresCache = { at: Date.now(), list: ordered };
+      return ordered;
+    }
+  } catch {}
+  return GENRES;
+}
+
 export const GENRES = [
   "Экшен", "Приключения", "Комедия", "Драма", "Романтика", "Фэнтези", "Фантастика", "Повседневность",
   "Сверхъестественное", "Психологическое", "Триллер", "Детектив", "Школа", "Спорт", "Музыка", "Меха",
