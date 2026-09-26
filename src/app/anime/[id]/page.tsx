@@ -89,6 +89,14 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
                   </div>
                 ) : null,
               )}
+              {rating.avg != null && (
+                <div className="rounded-2xl border border-accent/40 bg-accent/15 px-5 py-3">
+                  <div className="text-[10px] uppercase tracking-wider text-violet-200/70">Aniverse · {rating.count}</div>
+                  <div className="font-display text-xl font-bold">
+                    <span className="grad-text">★</span> {rating.avg.toFixed(1)}
+                  </div>
+                </div>
+              )}
             </div>
 
             {a.description && <p className="mt-6 max-w-3xl whitespace-pre-line leading-relaxed text-white/70">{a.description}</p>}
