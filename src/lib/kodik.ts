@@ -199,18 +199,22 @@ function dedupe(results: Raw[]): Anime[] {
 /** Столько карточек каталог показывает на одной странице — не больше и не меньше. */
 export const PAGE_SIZE = 14;
 
-type PagedCursor = { c: string | null; skip: number };
+type PagedCursor = { c: string | null; skip: number; pg: number };
 
 function decodeCursor(next?: string): PagedCursor {
-  if (!next) return { c: null, skip: 0 };
+  if (!next) return { c: null, skip: 0, pg: 1 };
   try {
     const j = JSON.parse(Buffer.from(next, "base64url").toString("utf8"));
     if (j && typeof j === "object") {
-      return { c: typeof j.c === "string" ? j.c : null, skip: Math.max(0, Number(j.skip) || 0) };
+      return {
+        c: typeof j.c === "string" ? j.c : null,
+        skip: Math.max(0, Number(j.skip) || 0),
+        pg: Math.max(1, Number(j.pg) || 1),
+      };
     }
   } catch {}
   // старая ссылка с «сырым» курсором Kodik
-  return { c: next, skip: 0 };
+  return { c: next, skip: 0, pg: 1 };
 }
 
 function encodeCursor(cur: PagedCursor): string {
@@ -229,7 +233,7 @@ export async function pagedList(p: ListParams = {}) {
   if (demoForced()) {
     const { demoList } = await import("./demo");
     const r = demoList(p, dedupe);
-    return { items: r.items.slice(0, PAGE_SIZE), next: null, total: r.total };
+    return { items: r.items.slice(0, PAGE_SIZE), next: null, total: r.total, page: 1 };
   }
   const start = decodeCursor(p.next);
   const seen = new Set<string>();
@@ -273,7 +277,9 @@ export async function pagedList(p: ListParams = {}) {
     }
 
     if (out.length === PAGE_SIZE) {
-      nextCursor = encodeCursor(idx < raw.length ? { c: cur, skip: idx } : { c: winNext, skip: 0 });
+      nextCursor = encodeCursor(
+        idx < raw.length ? { c: cur, skip: idx, pg: start.pg + 1 } : { c: winNext, skip: 0, pg: start.pg + 1 },
+      );
       break;
     }
     if (!winNext || !raw.length) break; // конец выдачи
@@ -281,7 +287,7 @@ export async function pagedList(p: ListParams = {}) {
     skip = 0;
   }
 
-  return { items: out, next: nextCursor, total };
+  return { items: out, next: nextCursor, total, page: start.pg };
 }
 
 export async function safePagedList(p: ListParams = {}) {
@@ -290,11 +296,11 @@ export async function safePagedList(p: ListParams = {}) {
   } catch (e) {
     if (!demoAllowed() || !isNetworkError(e)) {
       console.error(e);
-      return { items: [] as Anime[], next: null, total: 0 };
+      return { items: [] as Anime[], next: null, total: 0, page: 1 };
     }
     const { demoList } = await import("./demo");
     const r = demoList(p, dedupe);
-    return { items: r.items.slice(0, PAGE_SIZE), next: null, total: r.total };
+    return { items: r.items.slice(0, PAGE_SIZE), next: null, total: r.total, page: 1 };
   }
 }
 

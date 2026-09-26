@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import AnimeCard from "@/components/AnimeCard";
 import Filters from "@/components/Filters";
-import { FILTER_KINDS, GENRES, MIN_YEAR, STATUSES, safePagedList, type ListParams } from "@/lib/kodik";
+import { FILTER_KINDS, GENRES, MIN_YEAR, PAGE_SIZE, STATUSES, safePagedList, type ListParams } from "@/lib/kodik";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Каталог аниме" };
@@ -14,7 +14,7 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const sort = (SORTS as readonly string[]).includes(sp.sort ?? "") ? (sp.sort as ListParams["sort"]) : "shikimori_rating";
   const kind = sp.kind && FILTER_KINDS[sp.kind] ? sp.kind : undefined;
-  const { items, next, total } = await safePagedList({
+  const { items, next, total, page } = await safePagedList({
     sort,
     anime_kind: kind,
     anime_status: sp.status && STATUSES[sp.status] ? sp.status : undefined,
@@ -24,6 +24,7 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
     next: sp.next,
   });
 
+  const totalPages = total ? Math.ceil(total / PAGE_SIZE) : 0;
   const now = new Date().getFullYear();
   const years = Array.from({ length: now - MIN_YEAR }, (_, i) => now - i);
   const nextParams = new URLSearchParams(Object.entries(sp).filter(([, v]) => v) as [string, string][]);
@@ -35,7 +36,11 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
     <div className="mx-auto max-w-[1500px] px-5 pt-28 md:px-10 md:pt-36">
       <div className="absolute left-1/2 top-0 -z-10 h-80 w-[60%] -translate-x-1/2 rounded-full bg-accent/15 blur-[120px]" />
       <h1 className="font-display text-3xl font-extrabold md:text-5xl">{heading}</h1>
-      <p className="mt-2 text-white/40">{total ? `${total.toLocaleString("ru")} релизов в базе` : "Подборка аниме"}</p>
+      <p className="mt-2 text-white/40">
+        {total
+          ? `${total.toLocaleString("ru")} релизов в базе · страниц: ${totalPages.toLocaleString("ru")}`
+          : "Подборка аниме"}
+      </p>
       <div className="mt-8">
         <Suspense>
           <Filters
@@ -60,6 +65,11 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
           <Link href={`/catalog?${new URLSearchParams(Object.entries(sp).filter(([k, v]) => v && k !== "next") as [string, string][])}`} className="glass rounded-full px-7 py-3.5 font-semibold hover:bg-white/10">
             ← В начало
           </Link>
+        )}
+        {totalPages > 0 && (
+          <span className="glass self-center rounded-full px-6 py-3.5 font-semibold text-white/70">
+            Страница {page.toLocaleString("ru")} из {totalPages.toLocaleString("ru")}
+          </span>
         )}
         {next && (
           <Link href={`/catalog?${nextParams}`} className="btn-primary rounded-full px-8 py-3.5 font-semibold transition hover:scale-[1.03]">
