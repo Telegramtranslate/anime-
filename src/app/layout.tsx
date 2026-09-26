@@ -25,7 +25,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
           <div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-5 py-10 text-sm text-white/40 md:flex-row md:items-center md:justify-between md:px-10">
             <div>
               <div className="font-display text-lg font-bold text-white">ANI<span className="grad-text">VERSE</span></div>
-              <p className="mt-1">Видео предоставляется плеером Kodik. Данные — Shikimori.</p>
+              <p className="mt-1">Твоё аниме-пространство: смотри онлайн, собирай коллекцию и делись мнением.</p>
             </div>
             <nav className="flex gap-6">
               <Link href="/catalog" className="hover:text-white">Каталог</Link>
