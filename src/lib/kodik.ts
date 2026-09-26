@@ -294,17 +294,66 @@ export async function pagedList(p: ListParams = {}) {
   return { items: out, next: nextCursor, total, page: start.pg };
 }
 
+/**
+ * Честное число уникальных тайтлов под текущие фильтры: Kodik в `total`
+ * считает записи по озвучкам, а каталог показывает схлопнутые карточки.
+ * Проходим выдачу курсорами (небольшие выборки) и считаем уникалы. Кэш 10 мин.
+ */
+const uniqCache = new Map<string, { n: number; at: number }>();
+
+export async function countUniqueTitles(p: ListParams = {}): Promise<number | null> {
+  if (demoForced()) return null;
+  const key = JSON.stringify([p.types, p.sort, p.order, p.anime_kind, p.anime_status, p.anime_genres, p.year]);
+  const hit = uniqCache.get(key);
+  if (hit && Date.now() - hit.at < 10 * 60 * 1000) return hit.n;
+  try {
+    const seen = new Set<string>();
+    let cur: string | null = null;
+    for (let guard = 0; guard < 40; guard++) {
+      const data = await call("list", {
+        types: p.types ?? "anime-serial,anime",
+        with_material_data: "true",
+        limit: 100,
+        sort: p.sort ?? "updated_at",
+        order: p.order ?? "desc",
+        anime_kind: p.anime_kind,
+        anime_status: p.anime_status,
+        anime_genres: p.anime_genres,
+        year: p.year,
+        next: cur ?? undefined,
+      });
+      const raw: Raw[] = data.results ?? [];
+      for (const r of raw) {
+        if (!isSafe(r)) continue;
+        seen.add(r.shikimori_id ? String(r.shikimori_id) : r.id);
+      }
+      let winNext: string | null = null;
+      if (data.next_page) {
+        try { winNext = new URL(data.next_page).searchParams.get("next"); } catch {}
+      }
+      if (!winNext || !raw.length) break;
+      cur = winNext;
+    }
+    uniqCache.set(key, { n: seen.size, at: Date.now() });
+    return seen.size;
+  } catch {
+    return null;
+  }
+}
+
 export async function safePagedList(p: ListParams = {}) {
   try {
-    return await pagedList(p);
+    const r = await pagedList(p);
+    const uniqueTotal = r.total > 0 && r.total <= 4000 ? await countUniqueTitles(p) : null;
+    return { ...r, uniqueTotal };
   } catch (e) {
     if (!demoAllowed() || !isNetworkError(e)) {
       console.error(e);
-      return { items: [] as Anime[], next: null, total: 0, page: 1 };
+      return { items: [] as Anime[], next: null, total: 0, page: 1, uniqueTotal: null };
     }
     const { demoList } = await import("./demo");
     const r = demoList(p, dedupe);
-    return { items: r.items.slice(0, PAGE_SIZE), next: null, total: r.total, page: 1 };
+    return { items: r.items.slice(0, PAGE_SIZE), next: null, total: r.total, page: 1, uniqueTotal: null };
   }
 }
 

@@ -23,7 +23,7 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const sortConf = SORTS[sp.sort ?? ""] ?? { sort: "shikimori_rating", order: "desc" };
   const kind = sp.kind && FILTER_KINDS[sp.kind] ? sp.kind : undefined;
-  const { items, next, total, page } = await safePagedList({
+  const { items, next, total, page, uniqueTotal } = await safePagedList({
     sort: sortConf.sort,
     order: sortConf.order,
     anime_kind: kind,
@@ -34,7 +34,9 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
     next: sp.next,
   });
 
-  const totalPages = total ? Math.ceil(total / PAGE_SIZE) : 0;
+  // честное число страниц: по уникальным тайтлам, если их удалось посчитать
+const realTotal = uniqueTotal ?? null;
+const totalPages = realTotal ? Math.ceil(realTotal / PAGE_SIZE) : 0;
   const now = new Date().getFullYear();
   const years = Array.from({ length: now - MIN_YEAR }, (_, i) => now - i);
   const nextParams = new URLSearchParams(Object.entries(sp).filter(([, v]) => v) as [string, string][]);
@@ -47,8 +49,8 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
       <div className="absolute left-1/2 top-0 -z-10 h-80 w-[60%] -translate-x-1/2 rounded-full bg-accent/15 blur-[120px]" />
       <h1 className="font-display text-3xl font-extrabold md:text-5xl">{heading}</h1>
       <p className="mt-2 text-white/40">
-        {total
-          ? `${total.toLocaleString("ru")} релизов в базе · страниц: ${totalPages.toLocaleString("ru")}`
+        {realTotal
+          ? `${realTotal.toLocaleString("ru")} тайтлов в подборке · страниц: ${totalPages.toLocaleString("ru")}`
           : "Подборка аниме"}
       </p>
       <div className="mt-8">
@@ -81,7 +83,9 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
         )}
         {totalPages > 0 && (
           <span className="glass self-center rounded-full px-6 py-3.5 font-semibold text-white/70">
-            Страница {page.toLocaleString("ru")} из {totalPages.toLocaleString("ru")}
+            {totalPages
+              ? `Страница ${page.toLocaleString("ru")} из ${totalPages.toLocaleString("ru")}`
+              : `Страница ${page.toLocaleString("ru")}`}
           </span>
         )}
         {next && (
