@@ -223,7 +223,7 @@ function decodeCursor(next?: string): PagedCursor {
         c: typeof j.c === "string" ? j.c : null,
         skip: Math.max(0, Number(j.skip) || 0),
         pg: Math.max(1, Number(j.pg) || 1),
-        seen: Array.isArray(j.seen) ? j.seen.map(Number).filter((n) => Number.isFinite(n) && n > 0).slice(0, SEEN_CAP) : [],
+        seen: Array.isArray(j.seen) ? (j.seen as unknown[]).map(Number).filter((n) => Number.isFinite(n) && n > 0).slice(0, SEEN_CAP) : [],
       };
     }
   } catch {}
