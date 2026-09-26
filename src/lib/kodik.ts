@@ -124,6 +124,14 @@ async function call(endpoint: "list" | "search", params: Record<string, string |
 
 const BANNED = ["Хентай", "Эротика", "Яой", "Юри"];
 
+/** Ключ уникальности тайтла: shikimori_id, а при его отсутствии — название+год. */
+function keyOf(r: Raw): string {
+  if (r.shikimori_id) return `s${r.shikimori_id}`;
+  const m = r.material_data ?? {};
+  const t = (m.anime_title || m.title || r.title || "").toLowerCase().trim();
+  return `t${t}:${m.year ?? r.year ?? ""}`;
+}
+
 function isSafe(r: Raw) {
   const m = r.material_data ?? {};
   if (m.rating_mpaa === "rx") return false;
@@ -188,7 +196,7 @@ function dedupe(results: Raw[]): Anime[] {
   const order: string[] = [];
   for (const r of results) {
     if (!isSafe(r)) continue;
-    const id = r.shikimori_id ? String(r.shikimori_id) : r.id;
+    const id = keyOf(r);
     const cur = best.get(id);
     if (!cur) {
       best.set(id, r);
@@ -203,7 +211,8 @@ function dedupe(results: Raw[]): Anime[] {
 /** Столько карточек каталог показывает на одной странице — не больше и не меньше. */
 export const PAGE_SIZE = 14;
 
-type PagedCursor = { c: string | null; skip: number; pg: number };
+type PagedCursor = { c: string | null; skip: number; pg: number; seen?: number[] };
+const SEEN_CAP = 800; // щит показанных id в курсоре (~8КБ URL — безопасно)
 
 function decodeCursor(next?: string): PagedCursor {
   if (!next) return { c: null, skip: 0, pg: 1 };
@@ -214,6 +223,7 @@ function decodeCursor(next?: string): PagedCursor {
         c: typeof j.c === "string" ? j.c : null,
         skip: Math.max(0, Number(j.skip) || 0),
         pg: Math.max(1, Number(j.pg) || 1),
+        seen: Array.isArray(j.seen) ? j.seen.map(Number).filter((n) => Number.isFinite(n) && n > 0).slice(0, SEEN_CAP) : [],
       };
     }
   } catch {}
@@ -241,6 +251,8 @@ export async function pagedList(p: ListParams = {}) {
   }
   const start = decodeCursor(p.next);
   const seen = new Set<string>();
+  const shield = new Set(start.seen ?? []);
+  const collected: number[] = [];
   const out: Anime[] = [];
   let cur: string | null = start.c;
   let skip = start.skip;
@@ -273,16 +285,21 @@ export async function pagedList(p: ListParams = {}) {
     for (const r of raw.slice(skip)) {
       idx++;
       if (!isSafe(r)) continue;
-      const id = r.shikimori_id ? String(r.shikimori_id) : r.id;
-      if (seen.has(id)) continue;
-      seen.add(id);
+      const key = keyOf(r);
+      if (seen.has(key)) continue;
+      if (r.shikimori_id && shield.has(Number(r.shikimori_id))) continue;
+      seen.add(key);
+      if (r.shikimori_id) collected.push(Number(r.shikimori_id));
       out.push(normalize(r));
       if (out.length === PAGE_SIZE) break;
     }
 
     if (out.length === PAGE_SIZE) {
+      const seenNext = [...shield, ...collected].slice(-SEEN_CAP);
       nextCursor = encodeCursor(
-        idx < raw.length ? { c: cur, skip: idx, pg: start.pg + 1 } : { c: winNext, skip: 0, pg: start.pg + 1 },
+        idx < raw.length
+          ? { c: cur, skip: idx, pg: start.pg + 1, seen: seenNext }
+          : { c: winNext, skip: 0, pg: start.pg + 1, seen: seenNext },
       );
       break;
     }
@@ -325,7 +342,7 @@ export async function countUniqueTitles(p: ListParams = {}): Promise<number | nu
       const raw: Raw[] = data.results ?? [];
       for (const r of raw) {
         if (!isSafe(r)) continue;
-        seen.add(r.shikimori_id ? String(r.shikimori_id) : r.id);
+        seen.add(keyOf(r));
       }
       let winNext: string | null = null;
       if (data.next_page) {
