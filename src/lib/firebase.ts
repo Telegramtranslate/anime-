@@ -116,17 +116,20 @@ export async function fbGet(uid: string): Promise<{ favorites: FavItem[]; histor
 
 export async function fbSet(uid: string, data: { favorites: FavItem[]; history: HistItem[] }) {
   if (!fbEnabled()) return;
-  const body = {
-    fields: {
-      favorites: { arrayValue: { values: data.favorites.slice(0, 500).map(favToV) } },
-      history: { arrayValue: { values: data.history.slice(0, 50).map(histToV) } },
-    },
-  };
   try {
+    // читаем текущие поля, чтобы не затереть profile/ratings при перезаписи
+    const existing = (await getDoc(docUrl(uid))) ?? {};
+    const body = JSON.stringify({
+      fields: {
+        ...existing,
+        favorites: { arrayValue: { values: data.favorites.slice(0, 500).map(favToV) } },
+        history: { arrayValue: { values: data.history.slice(0, 50).map(histToV) } },
+      },
+    });
     const r = await fetch(docUrl(uid), {
       method: "PATCH",
       headers: { "content-type": "application/json" },
-      body: JSON.stringify(body),
+      body,
       cache: "no-store",
       signal: AbortSignal.timeout(6000),
     });
@@ -137,7 +140,7 @@ export async function fbSet(uid: string, data: { favorites: FavItem[]; history: 
         {
           method: "POST",
           headers: { "content-type": "application/json" },
-          body: JSON.stringify(body),
+          body,
           cache: "no-store",
           signal: AbortSignal.timeout(6000),
         },

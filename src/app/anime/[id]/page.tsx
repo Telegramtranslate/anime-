@@ -8,7 +8,9 @@ import FavoriteButton from "@/components/FavoriteButton";
 import Row from "@/components/Row";
 import Shots from "@/components/Shots";
 import { fbGetComments, fbGetMyRating, fbGetRating } from "@/lib/firebase";
+import { recordHistory } from "@/lib/history";
 import { KINDS, STATUSES, getAnime, safeList } from "@/lib/kodik";
+import { getUid } from "@/lib/uid";
 
 export const dynamic = "force-dynamic";
 
@@ -33,10 +35,13 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const { anime: a, translations } = data;
   const store = await cookies();
   const fuid = store.get("fuid")?.value ?? null;
+  const uid = await getUid();
   const [rating, myScore, comments] = await Promise.all([
     fbGetRating(a.id),
     fbGetMyRating(fuid, a.id),
     fbGetComments(a.id),
+    // «Продолжить просмотр»: тайтл попадает в историю уже при открытии страницы
+    uid ? recordHistory(uid, { animeId: a.id, title: a.title, poster: a.poster }).catch(() => {}) : Promise.resolve(),
   ]);
   const similar = a.genres[0]
     ? (await safeList({ anime_genres: a.genres[0], sort: "shikimori_rating" })).items.filter((x) => x.id !== a.id).slice(0, 20)

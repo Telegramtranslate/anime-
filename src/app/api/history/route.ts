@@ -1,6 +1,7 @@
-import { db, dbAvailable } from "@/db";
+import { db } from "@/db";
 import { history } from "@/db/schema";
 import { fbEnabled, fbGet, fbSet } from "@/lib/firebase";
+import { recordHistory } from "@/lib/history";
 import { getUid } from "@/lib/uid";
 import { and, eq } from "drizzle-orm";
 
@@ -11,41 +12,10 @@ export async function POST(req: Request) {
     const uid = (await getUid(true))!;
     const b = await req.json();
     if (!b?.animeId || !b?.title) return Response.json({ error: "bad request" }, { status: 400 });
-    if (db) {
-      await db
-        .insert(history)
-        .values({
-          uid,
-          animeId: String(b.animeId),
-          title: String(b.title).slice(0, 300),
-          poster: b.poster ? String(b.poster) : null,
-          translation: b.translation ? String(b.translation) : null,
-        })
-        .onConflictDoUpdate({
-          target: [history.uid, history.animeId],
-          set: { updatedAt: new Date(), translation: b.translation ? String(b.translation) : null },
-        });
-      return Response.json({ ok: true });
-    }
-    if (fbEnabled()) {
-      const d = await fbGet(uid);
-      const rest = d.history.filter((h) => h.animeId !== String(b.animeId));
-      const next = [
-        {
-          animeId: String(b.animeId),
-          title: String(b.title).slice(0, 300),
-          poster: b.poster ? String(b.poster) : null,
-          translation: b.translation ? String(b.translation) : null,
-          updatedAt: Date.now(),
-        },
-        ...rest,
-      ].slice(0, 50);
-      await fbSet(uid, { favorites: d.favorites, history: next });
-      return Response.json({ ok: true });
-    }
-    return Response.json({ ok: true, available: false });
+    await recordHistory(uid, b);
+    return Response.json({ ok: true });
   } catch {
-    return Response.json({ ok: true, available: dbAvailable });
+    return Response.json({ ok: true });
   }
 }
 
