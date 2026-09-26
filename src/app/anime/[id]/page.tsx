@@ -1,10 +1,13 @@
+import { cookies } from "next/headers";
 import { notFound } from "next/navigation";
 import Link from "next/link";
 import type { Metadata } from "next";
+import Feedback from "@/components/Feedback";
 import Player from "@/components/Player";
 import FavoriteButton from "@/components/FavoriteButton";
 import Row from "@/components/Row";
 import Shots from "@/components/Shots";
+import { fbGetComments, fbGetMyRating, fbGetRating } from "@/lib/firebase";
 import { KINDS, STATUSES, getAnime, safeList } from "@/lib/kodik";
 
 export const dynamic = "force-dynamic";
@@ -28,6 +31,13 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const data = await load(id);
   if (!data) notFound();
   const { anime: a, translations } = data;
+  const store = await cookies();
+  const fuid = store.get("fuid")?.value ?? null;
+  const [rating, myScore, comments] = await Promise.all([
+    fbGetRating(a.id),
+    fbGetMyRating(fuid, a.id),
+    fbGetComments(a.id),
+  ]);
   const similar = a.genres[0]
     ? (await safeList({ anime_genres: a.genres[0], sort: "shikimori_rating" })).items.filter((x) => x.id !== a.id).slice(0, 20)
     : [];
@@ -107,6 +117,15 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
           <Shots items={a.screenshots.slice(0, 12)} />
         </section>
       )}
+
+      <Feedback
+        animeId={a.id}
+        loggedIn={Boolean(fuid)}
+        initialAvg={rating.avg}
+        initialCount={rating.count}
+        initialMine={myScore}
+        initialComments={comments}
+      />
 
       <Row title="Похожее" items={similar} />
     </div>

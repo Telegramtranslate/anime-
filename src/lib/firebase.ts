@@ -147,3 +147,156 @@ export async function fbSet(uid: string, data: { favorites: FavItem[]; history: 
     // сеть мигнула — коллекция сохранится в следующий раз
   }
 }
+
+/* ---------- пользовательские оценки и комментарии ---------- */
+
+export type CommentItem = {
+  uid: string;
+  name: string;
+  picture: string | null;
+  text: string;
+  createdAt: number;
+};
+
+function collUrl(coll: string, doc: string) {
+  return `https://firestore.googleapis.com/v1/projects/${PID}/databases/(default)/documents/${coll}/${encodeURIComponent(doc)}?key=${KEY}`;
+}
+
+async function getDoc(url: string): Promise<Record<string, V> | null> {
+  try {
+    const r = await fetch(url, { cache: "no-store", signal: AbortSignal.timeout(6000) });
+    if (!r.ok) return null;
+    const j = await r.json();
+    return (j?.fields as Record<string, V>) ?? null;
+  } catch {
+    return null;
+  }
+}
+
+async function setDoc(url: string, fields: Record<string, V>) {
+  const body = JSON.stringify({ fields });
+  const opts = { headers: { "content-type": "application/json" }, body, cache: "no-store" as const, signal: AbortSignal.timeout(6000) };
+  let r = await fetch(url, { ...opts, method: "PATCH" }).catch(() => null);
+  if (r?.status === 404) {
+    // документа ещё нет — создаём с тем же id
+    const m = url.match(/\/documents\/([^/]+)\/([^?]+)\?/);
+    if (m) {
+      const postUrl = `https://firestore.googleapis.com/v1/projects/${PID}/databases/(default)/documents/${m[1]}?documentId=${encodeURIComponent(m[2])}&key=${KEY}`;
+      r = await fetch(postUrl, { ...opts, method: "POST" }).catch(() => null);
+    }
+  }
+  return r;
+}
+
+/** Средняя пользовательская оценка тайтла. */
+export async function fbGetRating(animeId: string): Promise<{ avg: number | null; count: number }> {
+  if (!fbEnabled()) return { avg: null, count: 0 };
+  const f = await getDoc(collUrl("ratings", animeId));
+  const sum = num(f?.sum) ?? 0;
+  const count = num(f?.count) ?? 0;
+  return { avg: count > 0 ? Math.round((sum / count) * 10) / 10 : null, count };
+}
+
+/** Оценка текущего пользователя (из его документа). */
+export async function fbGetMyRating(uid: string | null, animeId: string): Promise<number | null> {
+  if (!fbEnabled() || !uid) return null;
+  const f = await getDoc(collUrl("users", uid));
+  const list = (f?.ratings?.arrayValue?.values ?? []).map((v) => {
+    const m = v.mapValue?.fields ?? {};
+    return { animeId: str(m.animeId), score: num(m.score) };
+  });
+  const mine = list.find((x) => x.animeId === animeId);
+  return mine?.score ?? null;
+}
+
+/** Ставит/меняет оценку: обновляет документ юзера и агрегат тайтла. */
+export async function fbSetRating(uid: string, animeId: string, score: number) {
+  if (!fbEnabled()) return fbGetRating(animeId);
+  const userFields = (await getDoc(collUrl("users", uid))) ?? {};
+  const all = (userFields.ratings?.arrayValue?.values ?? [])
+    .map((v) => {
+      const m = v.mapValue?.fields ?? {};
+      return { animeId: str(m.animeId) ?? "", score: num(m.score) ?? 0 };
+    })
+    .filter((x) => x.animeId);
+  const prev = all.find((x) => x.animeId === animeId)?.score ?? null;
+  const ratings = all.filter((x) => x.animeId !== animeId);
+
+  const agg = await getDoc(collUrl("ratings", animeId));
+  let sum = num(agg?.sum) ?? 0;
+  let count = num(agg?.count) ?? 0;
+  if (prev != null) {
+    sum = sum - prev + score;
+  } else {
+    sum += score;
+    count += 1;
+  }
+
+  ratings.push({ animeId, score });
+  await setDoc(collUrl("users", uid), {
+    ...userFields,
+    ratings: { arrayValue: { values: ratings.slice(0, 500).map((r) => ({ mapValue: { fields: { animeId: sv(r.animeId), score: iv(r.score) } } })) } },
+  });
+  await setDoc(collUrl("ratings", animeId), { sum: iv(sum), count: iv(count) });
+  return { avg: count > 0 ? Math.round((sum / count) * 10) / 10 : null, count };
+}
+
+/** Комментарии тайтла (новые в конце). */
+export async function fbGetComments(animeId: string): Promise<CommentItem[]> {
+  if (!fbEnabled()) return [];
+  const f = await getDoc(collUrl("animes", animeId));
+  return (f?.comments?.arrayValue?.values ?? [])
+    .map((v) => {
+      const m = v.mapValue?.fields ?? {};
+      return {
+        uid: str(m.uid) ?? "",
+        name: str(m.name) ?? "",
+        picture: str(m.picture),
+        text: str(m.text) ?? "",
+        createdAt: num(m.createdAt) ?? 0,
+      };
+    })
+    .filter((c) => c.text);
+}
+
+/** Добавляет комментарий, возвращает свежий список. */
+export async function fbAddComment(animeId: string, c: CommentItem): Promise<CommentItem[]> {
+  if (!fbEnabled()) return [];
+  const url = collUrl("animes", animeId);
+  const f = (await getDoc(url)) ?? {};
+  const list = [...fbParseComments(f), c].slice(-100);
+  await setDoc(url, {
+    ...f,
+    comments: {
+      arrayValue: {
+        values: list.map((x) => ({
+          mapValue: {
+            fields: {
+              uid: sv(x.uid),
+              name: sv(x.name),
+              picture: x.picture ? sv(x.picture) : nl(),
+              text: sv(x.text),
+              createdAt: iv(x.createdAt),
+            },
+          },
+        })),
+      },
+    },
+  });
+  return list;
+}
+
+function fbParseComments(f: Record<string, V>): CommentItem[] {
+  return (f?.comments?.arrayValue?.values ?? [])
+    .map((v) => {
+      const m = v.mapValue?.fields ?? {};
+      return {
+        uid: str(m.uid) ?? "",
+        name: str(m.name) ?? "",
+        picture: str(m.picture),
+        text: str(m.text) ?? "",
+        createdAt: num(m.createdAt) ?? 0,
+      };
+    })
+    .filter((c) => c.text);
+}
