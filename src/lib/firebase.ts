@@ -358,3 +358,115 @@ export async function fbStampComment(uid: string) {
     profile: { mapValue: { fields: { ...prof, commentAt: iv(Date.now()) } } },
   });
 }
+
+/* ---------- уведомления о новых сериях для избранного ---------- */
+
+export type NotifItem = {
+  animeId: string;
+  title: string;
+  poster: string | null;
+  episode: number;
+  createdAt: number;
+};
+
+export const NOTIF_CHECK_INTERVAL = 30 * 60 * 1000; // пересчёт не чаще раза в 30 минут
+
+export async function fbGetWithNotifs(uid: string): Promise<{
+  favorites: (FavItem & { episodes?: number | null })[];
+  notifications: NotifItem[];
+  lastCheck: number;
+  lastSeen: number;
+}> {
+  const empty = { favorites: [], notifications: [], lastCheck: 0, lastSeen: 0 };
+  if (!fbEnabled()) return empty;
+  const f = await getDoc(collUrl("users", uid));
+  if (!f) return empty;
+  const favorites = (f.favorites?.arrayValue?.values ?? []).map((v) => {
+    const m = v.mapValue?.fields ?? {};
+    return {
+      animeId: str(m.animeId) ?? "",
+      title: str(m.title) ?? "",
+      poster: str(m.poster),
+      year: num(m.year),
+      kind: str(m.kind),
+      createdAt: num(m.createdAt) ?? 0,
+      episodes: num(m.episodes),
+    };
+  }).filter((x) => x.animeId);
+  const notifications = (f.notifications?.arrayValue?.values ?? []).map((v) => {
+    const m = v.mapValue?.fields ?? {};
+    return {
+      animeId: str(m.animeId) ?? "",
+      title: str(m.title) ?? "",
+      poster: str(m.poster),
+      episode: num(m.episode) ?? 0,
+      createdAt: num(m.createdAt) ?? 0,
+    };
+  }).filter((x) => x.animeId);
+  const prof = f.profile?.mapValue?.fields ?? {};
+  return {
+    favorites,
+    notifications,
+    lastCheck: num(prof.lastNotifCheck) ?? 0,
+    lastSeen: num(prof.lastSeenNotif) ?? 0,
+  };
+}
+
+export async function fbSaveNotifState(
+  uid: string,
+  data: {
+    favorites: (FavItem & { episodes?: number | null })[];
+    notifications: NotifItem[];
+    lastCheck: number;
+  },
+) {
+  if (!fbEnabled()) return;
+  const existing = (await getDoc(collUrl("users", uid))) ?? {};
+  const prof = existing.profile?.mapValue?.fields ?? {};
+  await setDoc(collUrl("users", uid), {
+    ...existing,
+    favorites: {
+      arrayValue: {
+        values: data.favorites.slice(0, 500).map((x) => ({
+          mapValue: {
+            fields: {
+              animeId: sv(x.animeId),
+              title: sv(x.title),
+              poster: x.poster ? sv(x.poster) : nl(),
+              year: x.year != null ? iv(x.year) : nl(),
+              kind: x.kind ? sv(x.kind) : nl(),
+              createdAt: iv(x.createdAt),
+              episodes: x.episodes != null ? iv(x.episodes) : nl(),
+            },
+          },
+        })),
+      },
+    },
+    notifications: {
+      arrayValue: {
+        values: data.notifications.slice(0, 30).map((x) => ({
+          mapValue: {
+            fields: {
+              animeId: sv(x.animeId),
+              title: sv(x.title),
+              poster: x.poster ? sv(x.poster) : nl(),
+              episode: iv(x.episode),
+              createdAt: iv(x.createdAt),
+            },
+          },
+        })),
+      },
+    },
+    profile: { mapValue: { fields: { ...prof, lastNotifCheck: iv(data.lastCheck) } } },
+  });
+}
+
+export async function fbMarkNotifsSeen(uid: string) {
+  if (!fbEnabled()) return;
+  const existing = (await getDoc(collUrl("users", uid))) ?? {};
+  const prof = existing.profile?.mapValue?.fields ?? {};
+  await setDoc(collUrl("users", uid), {
+    ...existing,
+    profile: { mapValue: { fields: { ...prof, lastSeenNotif: iv(Date.now()) } } },
+  });
+}

@@ -4,6 +4,7 @@ import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
 import AuthButton from "./AuthButton";
+import NotificationCenter from "./NotificationCenter";
 
 const NAV = [
   { href: "/", label: "Главная" },
@@ -50,6 +51,7 @@ export default function Header() {
           ))}
         </nav>
         <div className="ml-auto flex items-center gap-3">
+          <NotificationCenter />
           <AuthButton />
           <button onClick={() => setOpen(!open)} className="grid h-10 w-10 place-items-center rounded-xl glass lg:hidden" aria-label="Меню">
             <svg viewBox="0 0 24 24" className="h-5 w-5 stroke-white" fill="none" strokeWidth="2"><path d={open ? "M6 6l12 12M18 6 6 18" : "M4 7h16M4 12h16M4 17h16"} /></svg>

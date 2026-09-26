@@ -9,7 +9,6 @@ import NicknameModal from "./NicknameModal";
 export default function AuthButton() {
   const [me, setMe] = useState<Me | null>(null);
   const [menuOpen, setMenuOpen] = useState(false);
-  const [notifOpen, setNotifOpen] = useState(false);
   const [modal, setModal] = useState(false);
   const [nickOpen, setNickOpen] = useState(false);
   const boxRef = useRef<HTMLDivElement>(null);
@@ -57,12 +56,6 @@ export default function AuthButton() {
               <svg viewBox="0 0 24 24" className="h-4 w-4 fill-pink-400"><path d="M12 21s-7.5-4.6-9.5-9.3C1 8 3.4 4.5 7 4.5c2 0 3.5 1 5 3 1.5-2 3-3 5-3 3.6 0 6 3.5 4.5 7.2C19.5 16.4 12 21 12 21z" /></svg>
               Моя коллекция
             </Link>
-            <button onClick={() => setNotifOpen((o) => !o)} className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10">
-              <svg viewBox="0 0 24 24" className="h-4 w-4 stroke-amber-300" fill="none" strokeWidth="2"><path d="M18 8a6 6 0 0 0-12 0c0 7-3 9-3 9h18s-3-2-3-9" /><path d="M13.7 21a2 2 0 0 1-3.4 0" /></svg>
-              Уведомления
-              <span className="ml-auto rounded-full bg-white/10 px-2 py-0.5 text-[10px] text-white/50">скоро</span>
-            </button>
-            {notifOpen && <p className="px-3 pb-2 text-xs text-white/40">Пока уведомлений нет — раздел в разработке.</p>}
             <button
               onClick={() => { setMenuOpen(false); setNickOpen(true); }}
               className="flex w-full items-center gap-2.5 rounded-xl px-3 py-2.5 text-sm font-semibold transition hover:bg-white/10"
