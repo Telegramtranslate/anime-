@@ -123,13 +123,26 @@ export async function fbSet(uid: string, data: { favorites: FavItem[]; history: 
     },
   };
   try {
-    await fetch(docUrl(uid), {
+    const r = await fetch(docUrl(uid), {
       method: "PATCH",
       headers: { "content-type": "application/json" },
       body: JSON.stringify(body),
       cache: "no-store",
       signal: AbortSignal.timeout(6000),
     });
+    if (r.status === 404) {
+      // документа ещё нет — создаём его с нашим id
+      await fetch(
+        `https://firestore.googleapis.com/v1/projects/${PID}/databases/(default)/documents/users?documentId=${encodeURIComponent(uid)}&key=${KEY}`,
+        {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify(body),
+          cache: "no-store",
+          signal: AbortSignal.timeout(6000),
+        },
+      );
+    }
   } catch {
     // сеть мигнула — коллекция сохранится в следующий раз
   }
