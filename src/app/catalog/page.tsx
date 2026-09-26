@@ -2,7 +2,7 @@ import Link from "next/link";
 import { Suspense } from "react";
 import AnimeCard from "@/components/AnimeCard";
 import Filters from "@/components/Filters";
-import { FILTER_KINDS, GENRES, MIN_YEAR, STATUSES, safeList, type ListParams } from "@/lib/kodik";
+import { FILTER_KINDS, GENRES, MIN_YEAR, STATUSES, safePagedList, type ListParams } from "@/lib/kodik";
 
 export const dynamic = "force-dynamic";
 export const metadata = { title: "Каталог аниме" };
@@ -14,7 +14,7 @@ export default async function Catalog({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
   const sort = (SORTS as readonly string[]).includes(sp.sort ?? "") ? (sp.sort as ListParams["sort"]) : "shikimori_rating";
   const kind = sp.kind && FILTER_KINDS[sp.kind] ? sp.kind : undefined;
-  const { items, next, total } = await safeList({
+  const { items, next, total } = await safePagedList({
     sort,
     anime_kind: kind,
     anime_status: sp.status && STATUSES[sp.status] ? sp.status : undefined,

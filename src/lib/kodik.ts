@@ -196,6 +196,108 @@ function dedupe(results: Raw[]): Anime[] {
   return order.map((id) => normalize(best.get(id)!));
 }
 
+/** Столько карточек каталог показывает на одной странице — не больше и не меньше. */
+export const PAGE_SIZE = 14;
+
+type PagedCursor = { c: string | null; skip: number };
+
+function decodeCursor(next?: string): PagedCursor {
+  if (!next) return { c: null, skip: 0 };
+  try {
+    const j = JSON.parse(Buffer.from(next, "base64url").toString("utf8"));
+    if (j && typeof j === "object") {
+      return { c: typeof j.c === "string" ? j.c : null, skip: Math.max(0, Number(j.skip) || 0) };
+    }
+  } catch {}
+  // старая ссылка с «сырым» курсором Kodik
+  return { c: next, skip: 0 };
+}
+
+function encodeCursor(cur: PagedCursor): string {
+  return Buffer.from(JSON.stringify(cur), "utf8").toString("base64url");
+}
+
+/**
+ * Пейджинг каталога с фиксированным размером страницы (PAGE_SIZE).
+ * Kodik отдаёт по несколько озвучек одного тайтла, а dedupe/isSafe часть
+ * записей схлопывает или отбрасывает — поэтому окна по 50 записей
+ * дочитываются, пока не наберётся ровно PAGE_SIZE уникальных тайтлов.
+ * Курсор следующей страницы запоминает окно и смещение внутри него,
+ * чтобы карточки не терялись и не повторялись.
+ */
+export async function pagedList(p: ListParams = {}) {
+  if (demoForced()) {
+    const { demoList } = await import("./demo");
+    const r = demoList(p, dedupe);
+    return { items: r.items.slice(0, PAGE_SIZE), next: null, total: r.total };
+  }
+  const start = decodeCursor(p.next);
+  const seen = new Set<string>();
+  const out: Anime[] = [];
+  let cur: string | null = start.c;
+  let skip = start.skip;
+  let nextCursor: string | null = null;
+  let total = 0;
+
+  for (let guard = 0; out.length < PAGE_SIZE && guard < 6; guard++) {
+    const data = await call("list", {
+      types: p.types ?? "anime-serial,anime",
+      with_material_data: "true",
+      limit: 50,
+      sort: p.sort ?? "updated_at",
+      order: p.order ?? "desc",
+      anime_kind: p.anime_kind,
+      anime_status: p.anime_status,
+      anime_genres: p.anime_genres,
+      year: p.year,
+      next: cur ?? undefined,
+    });
+    total = (data.total as number) ?? total;
+    const raw: Raw[] = data.results ?? [];
+    let winNext: string | null = null;
+    if (data.next_page) {
+      try {
+        winNext = new URL(data.next_page).searchParams.get("next");
+      } catch {}
+    }
+
+    let idx = skip;
+    for (const r of raw.slice(skip)) {
+      idx++;
+      if (!isSafe(r)) continue;
+      const id = r.shikimori_id ? String(r.shikimori_id) : r.id;
+      if (seen.has(id)) continue;
+      seen.add(id);
+      out.push(normalize(r));
+      if (out.length === PAGE_SIZE) break;
+    }
+
+    if (out.length === PAGE_SIZE) {
+      nextCursor = encodeCursor(idx < raw.length ? { c: cur, skip: idx } : { c: winNext, skip: 0 });
+      break;
+    }
+    if (!winNext || !raw.length) break; // конец выдачи
+    cur = winNext;
+    skip = 0;
+  }
+
+  return { items: out, next: nextCursor, total };
+}
+
+export async function safePagedList(p: ListParams = {}) {
+  try {
+    return await pagedList(p);
+  } catch (e) {
+    if (!demoAllowed() || !isNetworkError(e)) {
+      console.error(e);
+      return { items: [] as Anime[], next: null, total: 0 };
+    }
+    const { demoList } = await import("./demo");
+    const r = demoList(p, dedupe);
+    return { items: r.items.slice(0, PAGE_SIZE), next: null, total: r.total };
+  }
+}
+
 export type ListParams = {
   sort?: "shikimori_rating" | "updated_at" | "created_at" | "year" | "kinopoisk_rating" | "imdb_rating";
   order?: "asc" | "desc";
