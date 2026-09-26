@@ -5,8 +5,8 @@
  * лежат в одном документе users/{uid}: массивы favorites и history.
  */
 
-const PID = process.env.FIREBASE_PROJECT_ID;
-const KEY = process.env.FIREBASE_API_KEY;
+const PID = process.env.FIREBASE_PROJECT_ID || "animee-1d7de";
+const KEY = process.env.FIREBASE_API_KEY || "AIzaSyAX2az15_r4IwgKZX3_omhrhwqRe27gu8Q";
 
 export function fbEnabled() {
   return Boolean(PID && KEY);
