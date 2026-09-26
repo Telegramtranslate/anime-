@@ -12,11 +12,30 @@ import Link from "next/link";
 import "./globals.css";
 
 export const metadata: Metadata = {
-  title: { default: "ANIVERSE — смотреть аниме онлайн", template: "%s · ANIVERSE" },
-  description: "Тысячи аниме-сериалов и фильмов в HD с лучшими озвучками. Онгоинги, топы, каталог и персональная коллекция.",
+  metadataBase: new URL("https://ani-verse228.vercel.app"),
+  title: {
+    default: "ANIVERSE — смотреть аниме онлайн бесплатно в хорошем качестве",
+    template: "%s · ANIVERSE",
+  },
+  description:
+    "Смотреть аниме онлайн бесплатно в хорошем качестве HD 720p-1080p с русской озвучкой. Тысячи сериалов и фильмов: онгоинги, топы, новинки. Все серии подряд без регистрации.",
+  keywords: [
+    "смотреть аниме онлайн", "аниме бесплатно", "аниме онлайн в хорошем качестве",
+    "аниме с русской озвучкой", "аниме сериалы", "аниме фильмы", "онгоинги", "аниме 2026",
+  ],
+  openGraph: {
+    siteName: "ANIVERSE",
+    locale: "ru_RU",
+    type: "website",
+    title: "ANIVERSE — смотреть аниме онлайн бесплатно",
+    description: "Тысячи аниме-сериалов и фильмов в HD с русской озвучкой. Онгоинги, топы и новинки — все серии подряд.",
+    images: [{ url: "/favicon.png", type: "image/png" }],
+  },
+  twitter: { card: "summary", title: "ANIVERSE — смотреть аниме онлайн бесплатно", description: "Аниме в HD с русской озвучкой: онгоинги, топы, новинки." },
   icons: { icon: [{ url: "/favicon.png", type: "image/png" }] },
   themeColor: "#07070b",
   verification: { google: "YuKXId-N_keD9-kaV-ycKhi35fJo2Sx5mLFzLesXRhI" },
+  alternates: { canonical: "/" },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {

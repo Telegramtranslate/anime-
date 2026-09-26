@@ -24,7 +24,22 @@ async function load(id: string) {
 export async function generateMetadata({ params }: { params: Promise<{ id: string }> }): Promise<Metadata> {
   const { id } = await params;
   const d = await load(id);
-  return d ? { title: `${d.anime.title} — смотреть онлайн`, description: d.anime.description?.slice(0, 160) } : { title: "Не найдено" };
+  if (!d) return { title: "Не найдено" };
+  const a = d.anime;
+  const title = `${a.title} — смотреть онлайн бесплатно все серии`;
+  const description = `Смотреть аниме «${a.title}»${a.titleEn ? ` (${a.titleEn})` : ""} онлайн бесплатно в хорошем качестве HD с русской озвучкой.${a.year ? ` Год: ${a.year}.` : ""}${a.episodesAired ? ` Серий: ${a.episodesAired}.` : ""} Все серии подряд без регистрации.`;
+  return {
+    title,
+    description,
+    alternates: { canonical: `/anime/${id}` },
+    openGraph: {
+      type: "video.other",
+      title,
+      description,
+      images: a.poster ? [{ url: a.poster }] : undefined,
+    },
+    twitter: { card: "summary", title, description },
+  };
 }
 
 export default async function AnimePage({ params }: { params: Promise<{ id: string }> }) {
@@ -54,8 +69,25 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
     ["Возраст", a.minimalAge ? `${a.minimalAge}+` : a.mpaa ? a.mpaa.toUpperCase() : null],
   ];
 
+  const jsonLd = {
+    "@context": "https://schema.org",
+    "@type": a.kind === "movie" ? "Movie" : "TVSeries",
+    name: a.title,
+    alternateName: a.titleEn ?? undefined,
+    description: a.description?.slice(0, 500),
+    image: a.poster ?? undefined,
+    datePublished: a.year ? String(a.year) : undefined,
+    genre: a.genres,
+    numberOfEpisodes: a.episodesAired ?? undefined,
+    aggregateRating:
+      rating.avg != null
+        ? { "@type": "AggregateRating", ratingValue: Number(rating.avg.toFixed(1)), ratingCount: rating.count, bestRating: 10, worstRating: 1 }
+        : undefined,
+  };
+
   return (
     <div>
+      <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
       <section className="relative overflow-hidden">
         {/* eslint-disable-next-line @next/next/no-img-element */}
         {a.backdrop && <img src={a.backdrop} alt="" className="absolute inset-0 h-full w-full object-cover opacity-40 blur-sm scale-110" />}

@@ -6,7 +6,11 @@ import Filters from "@/components/Filters";
 import { FILTER_KINDS, GENRES, MIN_YEAR, PAGE_SIZE, STATUSES, safePagedList, type ListParams } from "@/lib/kodik";
 
 export const revalidate = 60; // ISR: кэш страницы 60 секунд
-export const metadata = { title: "Каталог аниме" };
+export const metadata = {
+  title: "Каталог аниме — смотреть онлайн бесплатно",
+  description: "Каталог аниме-сериалов и фильмов: фильтры по жанрам, годам и статусу, сортировка по рейтингу. Смотреть аниме онлайн бесплатно в хорошем качестве.",
+  alternates: { canonical: "/catalog" },
+};
 
 type SP = Promise<Record<string, string | undefined>>;
 const SORTS: Record<string, { sort: ListParams["sort"]; order: "asc" | "desc" }> = {
