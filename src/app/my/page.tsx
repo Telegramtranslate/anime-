@@ -2,6 +2,7 @@ import Link from "next/link";
 import { desc, eq } from "drizzle-orm";
 import { db } from "@/db";
 import { favorites, history } from "@/db/schema";
+import { fbEnabled, fbGet, type FavItem, type HistItem } from "@/lib/firebase";
 import { getUid } from "@/lib/uid";
 
 type Fav = (typeof favorites.$inferSelect);
@@ -18,6 +19,12 @@ async function loadCollection(uid: string | null): Promise<[Fav[], Hist[]]> {
   } catch {
     return [[], []];
   }
+}
+
+async function fbCollection(uid: string | null): Promise<[FavItem[], HistItem[]]> {
+  if (!uid || !fbEnabled()) return [[], []];
+  const d = await fbGet(uid);
+  return [d.favorites, d.history];
 }
 
 export const dynamic = "force-dynamic";
@@ -51,12 +58,12 @@ function Grid({ items, empty }: { items: Item[]; empty: string }) {
 
 export default async function My() {
   const uid = await getUid();
-  const [favs, hist] = await loadCollection(uid);
+  const [favs, hist] = db ? await loadCollection(uid) : await fbCollection(uid);
 
   return (
     <div className="mx-auto max-w-[1500px] px-5 pt-28 md:px-10 md:pt-36">
       <h1 className="font-display text-3xl font-extrabold md:text-5xl">Моя <span className="grad-text">коллекция</span></h1>
-      <p className="mt-2 text-white/40">Сохраняется автоматически в этом браузере — без регистрации.</p>
+      <p className="mt-2 text-white/40">Сохраняется автоматически — без регистрации.</p>
 
       <h2 className="mb-5 mt-12 font-display text-xl font-bold">Продолжить просмотр</h2>
       <Grid items={hist.map((h) => ({ ...h, sub: h.translation ? `Озвучка: ${h.translation}` : null }))} empty="Вы ещё ничего не смотрели." />
