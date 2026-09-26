@@ -89,7 +89,7 @@ function demoAllowed() {
   return process.env.ANIVERSE_DEMO !== "0" && process.env.ANIVERSE_DEMO !== "off";
 }
 
-async function call(endpoint: "list" | "search", params: Record<string, string | number | undefined>): Promise<Raw> {
+async function call(endpoint: "list" | "search" | "genres" | "years" | "countries" | "qualities/v2" | "translations/v2", params: Record<string, string | number | undefined>): Promise<Raw> {
   const qs = new URLSearchParams();
   for (const [k, v] of Object.entries(params)) if (v !== undefined && v !== "") qs.set(k, String(v));
   const key = endpoint + "?" + qs.toString();
