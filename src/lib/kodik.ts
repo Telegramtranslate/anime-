@@ -547,6 +547,13 @@ export const STATUSES: Record<string, string> = { ongoing: "Онгоинг", rel
  * Фильтр чувствителен к написанию: например, в базе «Исэкай» через «э»
  * (2 500+ тайтлов), а «Исекай» не находит ничего.
  */
+/** Дополнительные жанры Shikimori (их видно на карточках), которых нет в базовом списке. */
+const SHIKI_EXTRA = [
+  "Удостоено наград", "Гурман", "Саспенс", "Исекай", "Идолы", "Магия", "Гарем", "Вампиры", "Демоны",
+  "Космос", "Полиция", "Игры", "Детское", "Боевые искусства", "Суперсила", "Взрослый каст", "Работа",
+  "Мифология", "Путешествия во времени", "Гонки", "Командный спорт", "Шоу-бизнес", "Авангард", "Дзёсэй",
+];
+
 let genresCache: { at: number; list: string[] } | null = null;
 const GENRES_TTL = 6 * 3600_000;
 
@@ -571,8 +578,10 @@ export async function safeGenres(): Promise<string[]> {
     } catch {}
     const lowOf = (g: string) => g.toLowerCase().trim();
     const baseLow = new Set(GENRES.map(lowOf));
+    const shikiUniq = SHIKI_EXTRA.filter((g) => !baseLow.has(lowOf(g)));
+    shikiUniq.forEach((g) => baseLow.add(lowOf(g)));
     const extraUniq = extra.filter((g) => !baseLow.has(lowOf(g)));
-    const candidates = [...GENRES, ...extraUniq].slice(0, 90);
+    const candidates = [...GENRES, ...shikiUniq, ...extraUniq].slice(0, 140);
 
     const ok: string[] = [];
     for (let i = 0; i < candidates.length; i += 16) {
@@ -599,7 +608,7 @@ export async function safeGenres(): Promise<string[]> {
           seenLow.add(l);
           return true;
         })
-        .slice(0, 36);
+        .slice(0, 40);
       genresCache = { at: Date.now(), list: ordered };
       return ordered;
     }
