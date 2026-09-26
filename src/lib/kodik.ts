@@ -566,18 +566,17 @@ export async function safeGenres(): Promise<string[]> {
         ...raw
           .filter((g) => g.title && !BANNED.includes(g.title))
           .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
-          .map((g) => g.title!)
-          .slice(0, 60),
+          .map((g) => g.title!),
       );
     } catch {}
     const lowOf = (g: string) => g.toLowerCase().trim();
     const baseLow = new Set(GENRES.map(lowOf));
     const extraUniq = extra.filter((g) => !baseLow.has(lowOf(g)));
-    const candidates = [...GENRES, ...extraUniq].slice(0, 40);
+    const candidates = [...GENRES, ...extraUniq].slice(0, 90);
 
     const ok: string[] = [];
-    for (let i = 0; i < candidates.length; i += 8) {
-      const chunk = candidates.slice(i, i + 8);
+    for (let i = 0; i < candidates.length; i += 16) {
+      const chunk = candidates.slice(i, i + 16);
       const res = await Promise.all(
         chunk.map(async (g) => {
           try {
@@ -600,7 +599,7 @@ export async function safeGenres(): Promise<string[]> {
           seenLow.add(l);
           return true;
         })
-        .slice(0, 30);
+        .slice(0, 36);
       genresCache = { at: Date.now(), list: ordered };
       return ordered;
     }
