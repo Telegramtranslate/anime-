@@ -40,7 +40,16 @@ export default function Filters({ kinds, statuses, genres, years }: { kinds: Opt
       ]} />
       <Select name="kind" label="Тип" options={[{ value: "", label: "Любой" }, ...kinds]} />
       <Select name="status" label="Статус" options={[{ value: "", label: "Любой" }, ...statuses]} />
-      <Select name="genre" label="Жанр" options={[{ value: "", label: "Все жанры" }, ...genres.map((g) => ({ value: g, label: g }))]} />
+      <Select
+        name="genre"
+        label="Жанр"
+        options={(() => {
+          const cur = sp.get("genre");
+          const opts = [{ value: "", label: "Все жанры" }, ...genres.map((g) => ({ value: g, label: g }))];
+          if (cur && !opts.some((o) => o.value === cur)) opts.push({ value: cur, label: cur });
+          return opts;
+        })()}
+      />
       <Select name="year" label="Год" options={[{ value: "", label: "Любой" }, ...years.map((y) => ({ value: String(y), label: String(y) }))]} />
     </div>
   );
