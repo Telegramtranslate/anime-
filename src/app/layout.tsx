@@ -13,6 +13,7 @@ import "./globals.css";
 export const metadata: Metadata = {
   title: { default: "ANIVERSE — смотреть аниме онлайн", template: "%s · ANIVERSE" },
   description: "Тысячи аниме-сериалов и фильмов в HD с лучшими озвучками. Онгоинги, топы, каталог и персональная коллекция.",
+  icons: { icon: [{ url: "/favicon.png", type: "image/png" }] },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
