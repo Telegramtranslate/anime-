@@ -34,12 +34,12 @@ export default function Header() {
         scrolled ? "border-b border-line bg-ink/75 backdrop-blur-xl" : "bg-gradient-to-b from-black/70 to-transparent"
       }`}
     >
-      <div className="mx-auto flex h-16 max-w-[1500px] items-center gap-6 px-5 md:h-20 md:px-10">
+      <div className="mx-auto flex h-16 max-w-[1500px] items-center gap-3 px-4 min-[400px]:gap-6 min-[400px]:px-5 md:h-20 md:px-10">
         <Link href="/" className="flex items-center gap-2.5">
           <span className="btn-primary grid h-9 w-9 place-items-center rounded-xl">
             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-white"><path d="M8 5v14l11-7z" /></svg>
           </span>
-          <span className="font-display text-lg font-bold tracking-tight">
+          <span className="font-display text-base font-bold tracking-tight min-[400px]:text-lg">
             ANI<span className="grad-text">VERSE</span>
           </span>
         </Link>
@@ -50,7 +50,7 @@ export default function Header() {
             </Link>
           ))}
         </nav>
-        <div className="ml-auto flex items-center gap-3">
+        <div className="ml-auto flex items-center gap-2 min-[400px]:gap-3">
           <NotificationCenter />
           <AuthButton />
           <button onClick={() => setOpen(!open)} className="grid h-10 w-10 place-items-center rounded-xl glass lg:hidden" aria-label="Меню">

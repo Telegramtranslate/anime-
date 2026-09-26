@@ -108,7 +108,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
             </dl>
 
             <div className="mt-8 flex flex-wrap gap-3">
-              <a href="#player" className="btn-primary flex items-center gap-2 rounded-full px-7 py-4 font-semibold transition hover:scale-[1.03]">
+              <a href="#player" className="btn-primary flex items-center gap-2 rounded-full px-5 py-3.5 font-semibold transition hover:scale-[1.03] min-[400px]:px-7 min-[400px]:py-4">
                 <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white"><path d="M8 5v14l11-7z" /></svg>Смотреть
               </a>
               <FavoriteButton animeId={a.id} title={a.title} poster={a.poster} year={a.year} kind={a.kind} />

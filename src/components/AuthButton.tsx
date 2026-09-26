@@ -89,9 +89,9 @@ export default function AuthButton() {
 
   return (
     <>
-      <button onClick={() => setModal(true)} className="glass flex items-center gap-2 rounded-full px-4 py-2 text-sm font-semibold transition hover:bg-white/10">
+      <button onClick={() => setModal(true)} aria-label="Войти" className="glass flex items-center gap-2 rounded-full px-2.5 py-2 text-sm font-semibold transition hover:bg-white/10 min-[400px]:px-4">
         <svg viewBox="0 0 24 24" className="h-4 w-4 stroke-white/70" fill="none" strokeWidth="2"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2" /><circle cx="12" cy="7" r="4" /></svg>
-        Войти
+        <span className="hidden min-[400px]:inline">Войти</span>
       </button>
       {modal && (
         <AuthModal

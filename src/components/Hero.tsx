@@ -51,11 +51,11 @@ export default function Hero({ items }: { items: Anime[] }) {
             {a.genres.slice(0, 4).map((g) => <span key={g}>#{g}</span>)}
           </div>
           <div className="mt-8 flex flex-wrap gap-3">
-            <Link href={`/anime/${a.id}#player`} className="btn-primary flex items-center gap-2 rounded-full px-7 py-4 font-semibold transition hover:scale-[1.03]">
+            <Link href={`/anime/${a.id}#player`} className="btn-primary flex items-center gap-2 rounded-full px-5 py-3.5 font-semibold transition hover:scale-[1.03] min-[400px]:px-7 min-[400px]:py-4">
               <svg viewBox="0 0 24 24" className="h-5 w-5 fill-white"><path d="M8 5v14l11-7z" /></svg>
               Смотреть
             </Link>
-            <Link href={`/anime/${a.id}`} className="glass rounded-full px-7 py-4 font-semibold transition hover:bg-white/10">Подробнее</Link>
+            <Link href={`/anime/${a.id}`} className="glass rounded-full px-5 py-3.5 font-semibold transition hover:bg-white/10 min-[400px]:px-7 min-[400px]:py-4">Подробнее</Link>
           </div>
         </div>
       </div>

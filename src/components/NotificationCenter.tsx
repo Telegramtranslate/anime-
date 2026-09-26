@@ -78,7 +78,7 @@ export default function NotificationCenter() {
       </button>
 
       {open && (
-        <div className="absolute right-0 top-full z-50 mt-2 max-h-[70vh] w-80 overflow-y-auto rounded-2xl border border-line bg-ink/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl">
+        <div className="absolute right-0 top-full z-50 mt-2 max-h-[70vh] w-80 max-w-[calc(100vw-2rem)] overflow-y-auto rounded-2xl border border-line bg-ink/95 p-2 shadow-2xl shadow-black/60 backdrop-blur-xl">
           <p className="px-3 py-2 text-xs font-semibold uppercase tracking-wider text-white/40">Уведомления</p>
           {items.length === 0 && <p className="px-3 pb-3 text-sm text-white/40">Пока пусто. Добавляй аниме в коллекцию — и узнавай о новых сериях первым.</p>}
           {items.map((n) => (

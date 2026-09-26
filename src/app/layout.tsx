@@ -15,6 +15,7 @@ export const metadata: Metadata = {
   title: { default: "ANIVERSE — смотреть аниме онлайн", template: "%s · ANIVERSE" },
   description: "Тысячи аниме-сериалов и фильмов в HD с лучшими озвучками. Онгоинги, топы, каталог и персональная коллекция.",
   icons: { icon: [{ url: "/favicon.png", type: "image/png" }] },
+  themeColor: "#07070b",
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
