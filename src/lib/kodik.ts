@@ -178,7 +178,7 @@ function normalize(r: Raw): Anime {
     year: m.year ?? r.year ?? null,
     kind: m.anime_kind ?? null,
     status: m.anime_status ?? m.all_status ?? null,
-    genres: [...new Set(m.anime_genres ?? m.genres ?? [])],
+    genres: [...new Set((m.anime_genres ?? m.genres ?? []) as string[])],
     studios: m.anime_studios ?? [],
     rating: m.shikimori_rating ?? null,
     votes: m.shikimori_votes ?? null,
