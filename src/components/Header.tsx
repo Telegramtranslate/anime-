@@ -3,6 +3,7 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useEffect, useState } from "react";
+import AuthButton from "./AuthButton";
 
 const NAV = [
   { href: "/", label: "Главная" },
@@ -48,9 +49,12 @@ export default function Header() {
             </Link>
           ))}
         </nav>
-        <button onClick={() => setOpen(!open)} className="ml-auto grid h-10 w-10 place-items-center rounded-xl glass lg:hidden" aria-label="Меню">
-          <svg viewBox="0 0 24 24" className="h-5 w-5 stroke-white" fill="none" strokeWidth="2"><path d={open ? "M6 6l12 12M18 6 6 18" : "M4 7h16M4 12h16M4 17h16"} /></svg>
-        </button>
+        <div className="ml-auto flex items-center gap-3">
+          <AuthButton />
+          <button onClick={() => setOpen(!open)} className="grid h-10 w-10 place-items-center rounded-xl glass lg:hidden" aria-label="Меню">
+            <svg viewBox="0 0 24 24" className="h-5 w-5 stroke-white" fill="none" strokeWidth="2"><path d={open ? "M6 6l12 12M18 6 6 18" : "M4 7h16M4 12h16M4 17h16"} /></svg>
+          </button>
+        </div>
       </div>
       {open && (
         <div className="border-t border-line bg-ink/95 px-5 pb-6 pt-4 backdrop-blur-xl lg:hidden">

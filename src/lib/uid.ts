@@ -2,6 +2,9 @@ import { cookies } from "next/headers";
 
 export async function getUid(create = false): Promise<string | null> {
   const store = await cookies();
+  // вошедший через Google — коллекция привязана к аккаунту
+  const f = store.get("fuid")?.value;
+  if (f) return f;
   const v = store.get("uid")?.value;
   if (v) return v;
   if (!create) return null;
