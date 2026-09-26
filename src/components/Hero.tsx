@@ -41,7 +41,7 @@ export default function Hero({ items }: { items: Anime[] }) {
             {a.year && <span className="glass rounded-full px-3 py-1">{a.year}</span>}
             {a.kind && <span className="glass rounded-full px-3 py-1">{KIND[a.kind] ?? a.kind}</span>}
           </div>
-          <h1 className="font-display text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">{a.title}</h1>
+          <h1 className="font-display line-clamp-3 text-4xl font-extrabold leading-[1.05] tracking-tight md:text-6xl lg:text-7xl">{a.title}</h1>
           {a.titleEn && <p className="mt-3 text-lg text-white/50">{a.titleEn}</p>}
           {a.description && <p className="mt-5 line-clamp-3 max-w-xl text-base leading-relaxed text-white/70">{a.description}</p>}
           <div className="mt-4 flex flex-wrap gap-2 text-sm text-white/50">
