@@ -358,23 +358,41 @@ export async function safeList(p: ListParams = {}) {
 }
 
 export async function searchAnime(q: string) {
-  try {
-    if (demoForced()) {
-      const { demoSearch } = await import("./demo");
-      return dedupe(demoSearch(q));
-    }
-    const data = await call("search", {
-      title: q,
-      types: "anime-serial,anime",
-      with_material_data: "true",
-      limit: 100,
-    });
-    return dedupe(data.results ?? []);
-  } catch (e) {
-    if (!demoAllowed() || !isNetworkError(e)) throw e;
+  if (demoForced()) {
     const { demoSearch } = await import("./demo");
     return dedupe(demoSearch(q));
   }
+
+  // Kodik ищет только почти полное название, Shikimori — с первых букв.
+  // Берём оба источника: Kodik даёт полные карточки, Shikimori — точные попадания.
+  let kodikItems: Anime[] = [];
+  let kodikErr: unknown = null;
+  try {
+    const data = await call("search", { title: q, types: "anime-serial,anime", with_material_data: "true", limit: 100 });
+    kodikItems = dedupe(data.results ?? []);
+  } catch (e) {
+    kodikErr = e;
+  }
+
+  let shikiItems: Anime[] = [];
+  let shikiErr: unknown = null;
+  try {
+    const { shikiSearch } = await import("./shiki");
+    shikiItems = await shikiSearch(q);
+  } catch (e) {
+    shikiErr = e;
+  }
+
+  if (!kodikItems.length && !shikiItems.length) {
+    if (demoAllowed() && (isNetworkError(kodikErr) || isNetworkError(shikiErr))) {
+      const { demoSearch } = await import("./demo");
+      return dedupe(demoSearch(q));
+    }
+    return [];
+  }
+
+  const seen = new Set(kodikItems.map((a) => a.id));
+  return [...kodikItems, ...shikiItems.filter((s) => !seen.has(s.id))];
 }
 
 export async function getAnime(id: string): Promise<{ anime: Anime; translations: Translation[] } | null> {
