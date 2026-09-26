@@ -51,7 +51,9 @@ const totalPages = realTotal ? Math.ceil(realTotal / PAGE_SIZE) : 0;
       <p className="mt-2 text-white/40">
         {realTotal
           ? `${realTotal.toLocaleString("ru")} тайтлов в подборке · страниц: ${totalPages.toLocaleString("ru")}`
-          : "Подборка аниме"}
+          : total
+            ? `${total.toLocaleString("ru")} релизов в базе со всеми озвучками и изданиями`
+            : "Подборка аниме"}
       </p>
       <div className="mt-8">
         <CatalogSearch />
