@@ -26,9 +26,11 @@ export default function Feedback(p: Props) {
   const [text, setText] = useState("");
   const [busy, setBusy] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
+  const [err, setErr] = useState("");
 
   const rate = async (s: number) => {
     if (!p.loggedIn) return setAuthOpen(true);
+    setErr("");
     const r = await fetch("/api/rate", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -40,6 +42,8 @@ export default function Feedback(p: Props) {
       setAvg(d.avg);
       setCount(d.count);
       setMine(d.mine);
+    } else {
+      setErr("Не удалось сохранить оценку. Проверь Rules в Firebase (нужны коллекции ratings и animes).");
     }
   };
 
@@ -94,6 +98,7 @@ export default function Feedback(p: Props) {
                 </button>
               ))}
             </div>
+            {err && <p className="mt-2 text-xs font-semibold text-red-400">{err}</p>}
           </div>
         </div>
       </div>

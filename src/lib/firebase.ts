@@ -173,7 +173,7 @@ async function getDoc(url: string): Promise<Record<string, V> | null> {
   }
 }
 
-async function setDoc(url: string, fields: Record<string, V>) {
+async function setDoc(url: string, fields: Record<string, V>): Promise<boolean> {
   const body = JSON.stringify({ fields });
   const opts = { headers: { "content-type": "application/json" }, body, cache: "no-store" as const, signal: AbortSignal.timeout(6000) };
   let r = await fetch(url, { ...opts, method: "PATCH" }).catch(() => null);
@@ -185,7 +185,7 @@ async function setDoc(url: string, fields: Record<string, V>) {
       r = await fetch(postUrl, { ...opts, method: "POST" }).catch(() => null);
     }
   }
-  return r;
+  return Boolean(r?.ok);
 }
 
 /** Средняя пользовательская оценка тайтла. */
@@ -211,7 +211,7 @@ export async function fbGetMyRating(uid: string | null, animeId: string): Promis
 
 /** Ставит/меняет оценку: обновляет документ юзера и агрегат тайтла. */
 export async function fbSetRating(uid: string, animeId: string, score: number) {
-  if (!fbEnabled()) return fbGetRating(animeId);
+  if (!fbEnabled()) return { avg: null, count: 0, saved: false };
   const userFields = (await getDoc(collUrl("users", uid))) ?? {};
   const all = (userFields.ratings?.arrayValue?.values ?? [])
     .map((v) => {
@@ -233,12 +233,12 @@ export async function fbSetRating(uid: string, animeId: string, score: number) {
   }
 
   ratings.push({ animeId, score });
-  await setDoc(collUrl("users", uid), {
+  const ok1 = await setDoc(collUrl("users", uid), {
     ...userFields,
     ratings: { arrayValue: { values: ratings.slice(0, 500).map((r) => ({ mapValue: { fields: { animeId: sv(r.animeId), score: iv(r.score) } } })) } },
   });
-  await setDoc(collUrl("ratings", animeId), { sum: iv(sum), count: iv(count) });
-  return { avg: count > 0 ? Math.round((sum / count) * 10) / 10 : null, count };
+  const ok2 = await setDoc(collUrl("ratings", animeId), { sum: iv(sum), count: iv(count) });
+  return { avg: count > 0 ? Math.round((sum / count) * 10) / 10 : null, count, saved: ok1 && ok2 };
 }
 
 /** Комментарии тайтла (новые в конце). */

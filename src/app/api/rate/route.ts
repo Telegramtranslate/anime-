@@ -17,7 +17,8 @@ export async function POST(req: Request) {
       return Response.json({ error: "auth" }, { status: 401 });
     }
     const r = await fbSetRating(fuid, String(animeId), s);
-    return Response.json({ ok: true, ...r, mine: s });
+    if (!r.saved) return Response.json({ error: "db" }, { status: 500 });
+    return Response.json({ ok: true, avg: r.avg, count: r.count, mine: s });
   } catch {
     return Response.json({ error: "fail" }, { status: 500 });
   }
