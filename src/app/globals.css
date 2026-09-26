@@ -13,6 +13,15 @@
 html { background: #07070b; color-scheme: dark; }
 body { min-height: 100vh; }
 
+@layer base {
+  /* курсор-«рука» на всём кликабельном */
+  button:not(:disabled), a, [role="button"], summary, select { cursor: pointer; }
+  /* лёгкое приближение при наведении и «нажатие» при клике */
+  button:not(:disabled), a { transition: scale .15s ease; }
+  button:not(:disabled):hover, a:hover { scale: 1.04; }
+  button:not(:disabled):active, a:active { scale: .97; }
+}
+
 ::selection { background: #8b5cf6; color: white; }
 
 .grad-text {
