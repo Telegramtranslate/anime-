@@ -335,3 +335,26 @@ export async function fbSetNickname(
   });
   return { ok: true };
 }
+
+/* ---------- анти-спам: не чаще комментария раз в 10 секунд ---------- */
+
+export const COMMENT_COOLDOWN = 10_000;
+
+export async function fbCommentGate(uid: string): Promise<{ ok: boolean; wait?: number }> {
+  if (!fbEnabled()) return { ok: true };
+  const f = await getDoc(collUrl("users", uid));
+  const last = num(f?.profile?.mapValue?.fields?.commentAt) ?? 0;
+  const diff = Date.now() - last;
+  if (diff < COMMENT_COOLDOWN) return { ok: false, wait: Math.ceil((COMMENT_COOLDOWN - diff) / 1000) };
+  return { ok: true };
+}
+
+export async function fbStampComment(uid: string) {
+  if (!fbEnabled()) return;
+  const f = (await getDoc(collUrl("users", uid))) ?? {};
+  const prof = f.profile?.mapValue?.fields ?? {};
+  await setDoc(collUrl("users", uid), {
+    ...f,
+    profile: { mapValue: { fields: { ...prof, commentAt: iv(Date.now()) } } },
+  });
+}

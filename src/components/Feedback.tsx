@@ -27,6 +27,7 @@ export default function Feedback(p: Props) {
   const [busy, setBusy] = useState(false);
   const [authOpen, setAuthOpen] = useState(false);
   const [err, setErr] = useState("");
+  const [cErr, setCErr] = useState("");
 
   const rate = async (s: number) => {
     if (!p.loggedIn) return setAuthOpen(true);
@@ -53,6 +54,7 @@ export default function Feedback(p: Props) {
     const t = text.trim();
     if (!t || busy) return;
     setBusy(true);
+    setCErr("");
     const r = await fetch("/api/comments", {
       method: "POST",
       headers: { "content-type": "application/json" },
@@ -63,6 +65,8 @@ export default function Feedback(p: Props) {
     if (d.ok) {
       setComments(d.comments);
       setText("");
+    } else if (d.error === "fast") {
+      setCErr(`Слишком быстро — подожди ещё ${d.wait ?? 10} сек.`);
     }
     setBusy(false);
   };
@@ -133,6 +137,7 @@ export default function Feedback(p: Props) {
               placeholder="Написать комментарий…"
               className="w-full resize-none bg-transparent text-sm outline-none placeholder:text-white/40"
             />
+            {cErr && <p className="mt-2 text-xs font-semibold text-red-400">{cErr}</p>}
             <div className="mt-2 flex items-center justify-between">
               <span className="text-xs text-white/30">{text.length}/1000</span>
               <button type="submit" disabled={busy || !text.trim()} className="btn-primary rounded-full px-6 py-2.5 text-sm font-semibold transition hover:scale-[1.03] disabled:opacity-50">

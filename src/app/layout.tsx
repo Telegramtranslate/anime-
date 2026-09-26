@@ -7,6 +7,7 @@ import "@fontsource/unbounded/500.css";
 import "@fontsource/unbounded/700.css";
 import "@fontsource/unbounded/800.css";
 import Header from "@/components/Header";
+import CodeGuard from "@/components/CodeGuard";
 import Link from "next/link";
 import "./globals.css";
 
@@ -21,6 +22,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="ru">
       <body className="noise bg-ink font-sans text-white antialiased">
         <Header />
+        <CodeGuard />
         <main className="relative z-10">{children}</main>
         <footer className="relative z-10 mt-24 border-t border-line">
           <div className="mx-auto flex max-w-[1500px] flex-col gap-6 px-5 py-10 text-sm text-white/40 md:flex-row md:items-center md:justify-between md:px-10">

@@ -15,6 +15,12 @@ export function middleware(req: NextRequest) {
   res.headers.set("Referrer-Policy", "strict-origin-when-cross-origin");
   res.headers.set("Permissions-Policy", "camera=(), microphone=(), geolocation=(), payment=(), usb=()");
   res.headers.set("X-DNS-Prefetch-Control", "on");
+  // CSP: запрещаем встраивание объектов, чужие base URI и формы наружу;
+  // frame-ancestors дублирует защиту от кликджекинга на уровне CSP.
+  res.headers.set(
+    "Content-Security-Policy",
+    "base-uri 'self'; form-action 'self'; object-src 'none'; frame-ancestors 'self'",
+  );
   return res;
 }
 

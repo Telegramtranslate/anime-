@@ -1,5 +1,5 @@
 import { cookies } from "next/headers";
-import { fbAddComment, fbEnabled, fbGetComments } from "@/lib/firebase";
+import { fbAddComment, fbCommentGate, fbEnabled, fbGetComments, fbStampComment } from "@/lib/firebase";
 import { getUid } from "@/lib/uid";
 
 export const dynamic = "force-dynamic";
@@ -14,6 +14,10 @@ export async function POST(req: Request) {
     const t = String(text ?? "").trim().slice(0, 1000);
     if (!animeId || !t) return Response.json({ error: "bad request" }, { status: 400 });
 
+    // анти-спам: пауза между комментариями
+    const gate = await fbCommentGate(fuid);
+    if (!gate.ok) return Response.json({ ok: false, error: "fast", wait: gate.wait }, { status: 429 });
+
     const name = decodeURIComponent(store.get("fname")?.value ?? "") || "Аноним";
     const picture = decodeURIComponent(store.get("fpic")?.value ?? "") || null;
 
@@ -24,6 +28,7 @@ export async function POST(req: Request) {
       text: t,
       createdAt: Date.now(),
     });
+    await fbStampComment(fuid);
     return Response.json({ ok: true, comments: list });
   } catch {
     return Response.json({ error: "fail" }, { status: 500 });
