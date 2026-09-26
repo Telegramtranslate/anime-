@@ -33,10 +33,10 @@ export default function Filters({ kinds, statuses, genres, years }: { kinds: Opt
   return (
     <div className="flex flex-wrap gap-3">
       <Select name="sort" label="Сортировка" options={[
-        { value: "", label: "Рейтинг" },
-        { value: "updated_at", label: "Обновления" },
-        { value: "year", label: "Год выхода" },
-        { value: "created_at", label: "Добавлены" },
+        { value: "", label: "Рейтинг: сначала высокий" },
+        { value: "updated", label: "Обновления: свежие сверху" },
+        { value: "year_new", label: "Год: сначала новые" },
+        { value: "year_old", label: "Год: сначала старые" },
       ]} />
       <Select name="kind" label="Тип" options={[{ value: "", label: "Любой" }, ...kinds]} />
       <Select name="status" label="Статус" options={[{ value: "", label: "Любой" }, ...statuses]} />

@@ -9,14 +9,19 @@ export const dynamic = "force-dynamic";
 export const metadata = { title: "Каталог аниме" };
 
 type SP = Promise<Record<string, string | undefined>>;
-const SORTS = ["shikimori_rating", "updated_at", "year", "created_at"] as const;
+const SORTS: Record<string, { sort: ListParams["sort"]; order: "asc" | "desc" }> = {
+  updated: { sort: "updated_at", order: "desc" },
+  year_new: { sort: "year", order: "desc" },
+  year_old: { sort: "year", order: "asc" },
+};
 
 export default async function Catalog({ searchParams }: { searchParams: SP }) {
   const sp = await searchParams;
-  const sort = (SORTS as readonly string[]).includes(sp.sort ?? "") ? (sp.sort as ListParams["sort"]) : "shikimori_rating";
+  const sortConf = SORTS[sp.sort ?? ""] ?? { sort: "shikimori_rating", order: "desc" };
   const kind = sp.kind && FILTER_KINDS[sp.kind] ? sp.kind : undefined;
   const { items, next, total, page } = await safePagedList({
-    sort,
+    sort: sortConf.sort,
+    order: sortConf.order,
     anime_kind: kind,
     anime_status: sp.status && STATUSES[sp.status] ? sp.status : undefined,
     anime_genres: sp.genre,
