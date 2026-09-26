@@ -178,7 +178,7 @@ function normalize(r: Raw): Anime {
     year: m.year ?? r.year ?? null,
     kind: m.anime_kind ?? null,
     status: m.anime_status ?? m.all_status ?? null,
-    genres: m.anime_genres ?? m.genres ?? [],
+    genres: [...new Set(m.anime_genres ?? m.genres ?? [])],
     studios: m.anime_studios ?? [],
     rating: m.shikimori_rating ?? null,
     votes: m.shikimori_votes ?? null,
@@ -570,7 +570,10 @@ export async function safeGenres(): Promise<string[]> {
           .slice(0, 60),
       );
     } catch {}
-    const candidates = [...GENRES, ...extra.filter((g) => !GENRES.includes(g))].slice(0, 40);
+    const lowOf = (g: string) => g.toLowerCase().trim();
+    const baseLow = new Set(GENRES.map(lowOf));
+    const extraUniq = extra.filter((g) => !baseLow.has(lowOf(g)));
+    const candidates = [...GENRES, ...extraUniq].slice(0, 40);
 
     const ok: string[] = [];
     for (let i = 0; i < candidates.length; i += 8) {
@@ -589,7 +592,15 @@ export async function safeGenres(): Promise<string[]> {
     }
 
     if (ok.length >= 10) {
-      const ordered = [...GENRES.filter((g) => ok.includes(g)), ...ok.filter((g) => !GENRES.includes(g))].slice(0, 30);
+      const seenLow = new Set<string>();
+      const ordered = [...GENRES.filter((g) => ok.includes(g)), ...ok.filter((g) => !GENRES.includes(g))]
+        .filter((g) => {
+          const l = lowOf(g);
+          if (seenLow.has(l)) return false;
+          seenLow.add(l);
+          return true;
+        })
+        .slice(0, 30);
       genresCache = { at: Date.now(), list: ordered };
       return ordered;
     }
