@@ -125,6 +125,20 @@ async function call(endpoint: "list" | "search", params: Record<string, string |
 const BANNED = ["Хентай", "Эротика", "Яой", "Юри"];
 
 /** Ключ уникальности тайтла: shikimori_id, а при его отсутствии — название+год. */
+function hashMark(s: string): number {
+  // FNV-1a, сдвинут в диапазон > 1e9, чтобы не пересекаться с shikimori_id
+  let h = 2166136261;
+  for (let i = 0; i < s.length; i++) {
+    h ^= s.charCodeAt(i);
+    h = Math.imul(h, 16777619);
+  }
+  return 1_000_000_000 + ((h >>> 0) % 1_000_000_000);
+}
+
+function markOf(r: Raw, key: string): number {
+  return r.shikimori_id ? Number(r.shikimori_id) : hashMark(key);
+}
+
 function keyOf(r: Raw): string {
   if (r.shikimori_id) return `s${r.shikimori_id}`;
   const m = r.material_data ?? {};
@@ -286,10 +300,10 @@ export async function pagedList(p: ListParams = {}) {
       idx++;
       if (!isSafe(r)) continue;
       const key = keyOf(r);
-      if (seen.has(key)) continue;
-      if (r.shikimori_id && shield.has(Number(r.shikimori_id))) continue;
+      const mark = markOf(r, key);
+      if (seen.has(key) || shield.has(mark)) continue;
       seen.add(key);
-      if (r.shikimori_id) collected.push(Number(r.shikimori_id));
+      collected.push(mark);
       out.push(normalize(r));
       if (out.length === PAGE_SIZE) break;
     }
@@ -524,6 +538,30 @@ export const STATUSES: Record<string, string> = { ongoing: "Онгоинг", rel
  * Фильтр чувствителен к написанию: например, в базе «Исэкай» через «э»
  * (2 500+ тайтлов), а «Исекай» не находит ничего.
  */
+let genresCache: { at: number; list: string[] } | null = null;
+
+/**
+ * Живой словарь жанров Kodik (те же названия, что принимает фильтр anime_genres).
+ * Сортировка по популярности, хентайные жанры скрыты. Кэш — 1 час, фолбэк — GENRES.
+ */
+export async function safeGenres(): Promise<string[]> {
+  if (genresCache && Date.now() - genresCache.at < 3600_000) return genresCache.list;
+  try {
+    const data = await call("genres", { types: "anime-serial,anime" });
+    const raw: { title?: string; count?: number }[] = Array.isArray(data) ? data : (data.results ?? []);
+    const list = raw
+      .filter((g) => g.title && !BANNED.includes(g.title))
+      .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
+      .map((g) => g.title!)
+      .slice(0, 40);
+    if (list.length >= 10) {
+      genresCache = { at: Date.now(), list };
+      return list;
+    }
+  } catch {}
+  return GENRES;
+}
+
 export const GENRES = [
   "Экшен", "Приключения", "Комедия", "Драма", "Романтика", "Фэнтези", "Фантастика", "Повседневность",
   "Сверхъестественное", "Психологическое", "Триллер", "Детектив", "Школа", "Спорт", "Музыка", "Меха",
