@@ -74,3 +74,30 @@ export async function shikiSearch(q: string, limit = 12): Promise<Anime[]> {
   if (cache.size > 300) cache.delete(cache.keys().next().value!);
   return data;
 }
+
+/* ---------- живой рейтинг Shikimori для карточек ---------- */
+
+const scoreCache = new Map<string, { at: number; v: number | null }>();
+
+/** Текущий score тайтла на Shikimori (или null, если id не шикиморный/сеть недоступна). */
+export async function shikiScore(shikiId: string): Promise<number | null> {
+  if (!/^\d+$/.test(shikiId)) return null;
+  const hit = scoreCache.get(shikiId);
+  if (hit && Date.now() - hit.at < TTL) return hit.v;
+  try {
+    const r = await fetch(`${SHIKI}/api/animes/${shikiId}`, {
+      headers: { "User-Agent": "Aniverse (personal anime catalog)" },
+      cache: "no-store",
+      signal: AbortSignal.timeout(5000),
+    });
+    if (!r.ok) throw new Error(String(r.status));
+    const j = await r.json();
+    const raw = j?.score != null && j.score !== "" ? Number(j.score) : null;
+    const v = raw != null && !Number.isNaN(raw) && raw > 0 ? raw : null;
+    scoreCache.set(shikiId, { at: Date.now(), v });
+    return v;
+  } catch {
+    scoreCache.set(shikiId, { at: Date.now(), v: null });
+    return null;
+  }
+}

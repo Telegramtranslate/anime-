@@ -10,6 +10,7 @@ import Shots from "@/components/Shots";
 import { fbGetComments, fbGetMyRating, fbGetRating } from "@/lib/firebase";
 import { recordHistory } from "@/lib/history";
 import { KINDS, STATUSES, getAnime, safeList } from "@/lib/kodik";
+import { shikiScore } from "@/lib/shiki";
 import { getUid } from "@/lib/uid";
 
 export const dynamic = "force-dynamic";
@@ -36,10 +37,11 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
   const store = await cookies();
   const fuid = store.get("fuid")?.value ?? null;
   const uid = await getUid();
-  const [rating, myScore, comments] = await Promise.all([
+  const [rating, myScore, comments, shikiLive] = await Promise.all([
     fbGetRating(a.id),
     fbGetMyRating(fuid, a.id),
     fbGetComments(a.id),
+    shikiScore(a.id),
     // «Продолжить просмотр»: тайтл попадает в историю уже при открытии страницы
     uid ? recordHistory(uid, { animeId: a.id, title: a.title, poster: a.poster }).catch(() => {}) : Promise.resolve(),
   ]);
@@ -81,7 +83,7 @@ export default async function AnimePage({ params }: { params: Promise<{ id: stri
             <p className="mt-2 text-white/50">{[a.titleEn, a.titleJp].filter(Boolean).join(" · ")}</p>
 
             <div className="mt-6 flex flex-wrap gap-3">
-              {[["Shikimori", a.rating], ["IMDb", a.imdb], ["Кинопоиск", a.kp]].map(([n, v]) =>
+              {[["Shikimori", shikiLive ?? a.rating], ["IMDb", a.imdb], ["Кинопоиск", a.kp]].map(([n, v]) =>
                 v ? (
                   <div key={n as string} className="glass rounded-2xl px-5 py-3">
                     <div className="text-[10px] uppercase tracking-wider text-white/40">{n}</div>
