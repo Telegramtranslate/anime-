@@ -555,7 +555,7 @@ const SHIKI_EXTRA = [
 ];
 
 let genresCache: { at: number; list: string[] } | null = null;
-const GENRES_TTL = 6 * 3600_000;
+const GENRES_TTL = 3600_000;
 
 /**
  * Рабочие жанры: старые + популярные из живого словаря Kodik, но каждый кандидат
